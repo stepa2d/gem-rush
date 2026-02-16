@@ -31,8 +31,8 @@ if(fi===SP_BOMB){const bg=ctx.createRadialGradient(cx-s*.2,cy-s*.2,s*.05,cx,cy,s
 else if(fi===SP_LIGHT){const bg=ctx.createRadialGradient(cx,cy,s*.05,cx,cy,s);bg.addColorStop(0,"#FFF9C4");bg.addColorStop(.4,"#FFD54F");bg.addColorStop(1,"#FF8F00");ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,s*.9,0,Math.PI*2);ctx.fill();ctx.strokeStyle=`rgba(255,213,79,${.3+Math.sin(t*10)*.2})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,s,0,Math.PI*2);ctx.stroke();ctx.fillStyle="#E65100";ctx.beginPath();ctx.moveTo(cx-s*.15,cy-s*.7);ctx.lineTo(cx+s*.25,cy-s*.1);ctx.lineTo(cx,cy-s*.05);ctx.lineTo(cx+s*.2,cy+s*.7);ctx.lineTo(cx-s*.25,cy+s*.05);ctx.lineTo(cx+s*.02,cy+s*.05);ctx.closePath();ctx.fill()}
 else if(fi===SP_RAIN){const colors=["#E53935","#FF9800","#FDD835","#43A047","#1E88E5","#7B1FA2"];colors.forEach((col,i)=>{const a=(i/6)*Math.PI*2+t*2,r2=s*.65;ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx+Math.cos(a)*r2*.35,cy+Math.sin(a)*r2*.35,s*.3,0,Math.PI*2);ctx.fill()});const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,s*.35);cg.addColorStop(0,"rgba(255,255,255,0.9)");cg.addColorStop(1,"rgba(255,255,255,0)");ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,s*.35,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.font=`${s*.5}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("★",cx,cy)}}
 // Audio
-const useAudio=()=>{const cx=useRef(null),mu=useRef(null);const gc=()=>{if(!cx.current)cx.current=new(window.AudioContext||window.webkitAudioContext)();if(cx.current.state==="suspended")cx.current.resume();return cx.current};
-const sfx=useCallback((t,fi)=>{try{const c=gc(),n=c.currentTime,p=fi!==undefined?1+fi*.08:1,o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
+const useAudio=(mutedRef)=>{const cx=useRef(null),mu=useRef(null);const gc=()=>{if(!cx.current)cx.current=new(window.AudioContext||window.webkitAudioContext)();if(cx.current.state==="suspended")cx.current.resume();return cx.current};
+const sfx=useCallback((t,fi)=>{if(mutedRef?.current)return;try{const c=gc(),n=c.currentTime,p=fi!==undefined?1+fi*.08:1,o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
 if(t==="select"){o.type="sine";o.frequency.setValueAtTime(600*p,n);o.frequency.exponentialRampToValueAtTime(800*p,n+.08);g.gain.setValueAtTime(.12,n);g.gain.exponentialRampToValueAtTime(.001,n+.12);o.start(n);o.stop(n+.12)}
 else if(t==="match"){vb(30);o.type="sine";o.frequency.setValueAtTime(523*p,n);o.frequency.setValueAtTime(659*p,n+.07);o.frequency.setValueAtTime(784*p,n+.14);g.gain.setValueAtTime(.15,n);g.gain.exponentialRampToValueAtTime(.001,n+.25);o.start(n);o.stop(n+.25)}
 else if(t==="cascade"){vb(50);o.type="triangle";o.frequency.setValueAtTime(800,n);o.frequency.exponentialRampToValueAtTime(1400,n+.15);g.gain.setValueAtTime(.12,n);g.gain.exponentialRampToValueAtTime(.001,n+.25);o.start(n);o.stop(n+.25)}
@@ -46,7 +46,7 @@ else if(t==="hint"){o.type="sine";o.frequency.setValueAtTime(880,n);o.frequency.
 else if(t==="shuffle"){vb(60);o.type="triangle";o.frequency.setValueAtTime(300,n);o.frequency.setValueAtTime(700,n+.2);g.gain.setValueAtTime(.1,n);g.gain.exponentialRampToValueAtTime(.001,n+.35);o.start(n);o.stop(n+.35)}
 else if(t==="milestone"){vb(40);[880,1100,1320].forEach((fr,i)=>{const o2=c.createOscillator(),g2=c.createGain();o2.connect(g2);g2.connect(c.destination);o2.type="sine";o2.frequency.setValueAtTime(fr,n+i*.08);g2.gain.setValueAtTime(.08,n+i*.08);g2.gain.exponentialRampToValueAtTime(.001,n+i*.08+.2);o2.start(n+i*.08);o2.stop(n+i*.08+.2)})}
 }catch(e){}},[]);
-const startMusic=useCallback(()=>{try{const c=gc();if(mu.current)return;const m=c.createGain();m.gain.setValueAtTime(.018,c.currentTime);m.connect(c.destination);const ns=[262,330,392,330,294,349,440,349,262,330,392,523,440,392,349,330];let i=0;const p=()=>{if(!mu.current)return;const n=c.currentTime;[["sine",.5,1],["triangle",.2,.5]].forEach(([ty,v,ml])=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(m);o.type=ty;o.frequency.setValueAtTime(ns[i%ns.length]*ml,n);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+.38);o.start(n);o.stop(n+.38)});i++};const iv=setInterval(p,400);mu.current={m,iv}}catch(e){}},[]);
+const startMusic=useCallback(()=>{if(mutedRef?.current)return;try{const c=gc();if(mu.current)return;const m=c.createGain();m.gain.setValueAtTime(.018,c.currentTime);m.connect(c.destination);const ns=[262,330,392,330,294,349,440,349,262,330,392,523,440,392,349,330];let i=0;const p=()=>{if(!mu.current)return;const n=c.currentTime;[["sine",.5,1],["triangle",.2,.5]].forEach(([ty,v,ml])=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(m);o.type=ty;o.frequency.setValueAtTime(ns[i%ns.length]*ml,n);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+.38);o.start(n);o.stop(n+.38)});i++};const iv=setInterval(p,400);mu.current={m,iv}}catch(e){}},[]);
 const stopMusic=useCallback(()=>{if(mu.current){clearInterval(mu.current.iv);try{mu.current.m.gain.exponentialRampToValueAtTime(.001,gc().currentTime+.5)}catch(e){}mu.current=null}},[]);
 return{sfx,startMusic,stopMusic}};
 // Logic
@@ -104,17 +104,30 @@ const[spTip,setSpTip]=useState(null);const[mileHit,setMileHit]=useState(null);co
 // Online state
 const[gamesList,setGamesList]=useState([]);const[waitInfo,setWaitInfo]=useState(null);
 const[createFee,setCreateFee]=useState(0);const[createPc,setCreatePc]=useState(2);
+const[name,setName]=useState(()=>localStorage.getItem('gr_name')||'');
+const[soundOn,setSoundOn]=useState(()=>localStorage.getItem('gr_sound')!=='off');
+const[onlineCount,setOnlineCount]=useState(0);
+const[emoteShow,setEmoteShow]=useState(null);
+const[copied,setCopied]=useState(false);
 const gR=useRef(grid),lR=useRef(locked),wR=useRef(win),scR=useRef(scores),modeR=useRef(mode),pcR=useRef(pc);
 gR.current=grid;lR.current=locked;wR.current=win;scR.current=scores;modeR.current=mode;pcR.current=pc;
-const lm=useRef(Date.now());const seenSp=useRef(new Set());const{sfx,startMusic,stopMusic}=useAudio();
+const mutedRef=useRef(!soundOn);mutedRef.current=!soundOn;
+const lm=useRef(Date.now());const seenSp=useRef(new Set());const{sfx,startMusic,stopMusic}=useAudio(mutedRef);
 const socketRef=useRef(null);const myPI=useRef(0);
+const nameRef=useRef(name);nameRef.current=name;
+const saveName=n=>{setName(n);nameRef.current=n;localStorage.setItem('gr_name',n)};
+const toggleSound=()=>{const nv=!soundOn;setSoundOn(nv);mutedRef.current=!nv;localStorage.setItem('gr_sound',nv?'on':'off');if(!nv)stopMusic()};
+const shareUrl=waitInfo?`${window.location.origin}?join=${waitInfo.gameId}`:'';
+const copyInvite=()=>{if(!shareUrl)return;navigator.clipboard?.writeText(shareUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000)}).catch(()=>{})};
+const shareResult=()=>{const txt=`🏆 Набрал ${scores[0]} очков в Gem Rush! Сможешь больше?\n${window.location.origin}`;if(navigator.share)navigator.share({title:'Gem Rush',text:txt}).catch(()=>{});else navigator.clipboard?.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000)}).catch(()=>{})};
 
+const myPlayer=useMemo(()=>({...ME,n:name||'Ты'}),[name]);
 const PL=useMemo(()=>{
-  if(mode==='solo')return[ME];
-  if(mode==='bot')return[ME,...BOTS.slice(0,pc-1)];
-  if(mode==='online')return[ME,...Array.from({length:pc-1},(_,i)=>({n:`Игрок ${i+2}`,a:"🎭",c:OP_COLS[i%3],r:OP_COLS[i%3]}))];
-  return[ME];
-},[mode,pc]);
+  if(mode==='solo')return[myPlayer];
+  if(mode==='bot')return[myPlayer,...BOTS.slice(0,pc-1)];
+  if(mode==='online')return[myPlayer,...Array.from({length:pc-1},(_,i)=>({n:`Игрок ${i+2}`,a:"🎭",c:OP_COLS[i%3],r:OP_COLS[i%3]}))];
+  return[myPlayer];
+},[mode,pc,myPlayer]);
 
 const spw=(r,c,col,n=8)=>{const cx=PAD+c*CELL+CELL/2,cy=PAD+r*CELL+CELL/2;for(let i=0;i<n;i++)parts.push(new Pt(cx,cy,col))};
 const showSpTip=ty=>{if(seenSp.current.has(ty))return;seenSp.current.add(ty);const tips={[SP_BOMB]:"💣 Свапни бомбу — взрыв 3×3!",[SP_LIGHT]:"⚡ Свапни молнию — удар крестом!",[SP_RAIN]:"🌈 Свапни радугу — убирает цвет!"};setSpTip(tips[ty]);setTimeout(()=>setSpTip(null),2200)};
@@ -126,12 +139,18 @@ const chkR=useCallback(g=>{if(hasM(g,lR.current))return g;sfx("shuffle");setShMs
 useEffect(()=>{
   const socket=io(window.location.origin,{transports:["websocket","polling"]});
   socketRef.current=socket;
+  socket.on('online_count',c=>setOnlineCount(c));
   socket.on('games_list',list=>setGamesList(list));
   socket.on('game_created',({gameId})=>setWaitInfo({gameId,current:1,max:createPc}));
   socket.on('player_joined',({currentPlayers,maxPlayers})=>setWaitInfo(w=>w?{...w,current:currentPlayers,max:maxPlayers}:w));
   socket.on('player_left',({currentPlayers,maxPlayers})=>setWaitInfo(w=>w?{...w,current:currentPlayers,max:maxPlayers}:w));
   socket.on('game_expired',()=>{setScr('onlineLobby');setWaitInfo(null)});
   socket.on('join_error',({message})=>alert(message));
+  socket.on('emote',({playerIndex,emoji})=>{setEmoteShow({pi:playerIndex,emoji,t:Date.now()});setTimeout(()=>setEmoteShow(null),1800)});
+  // Auto-join from URL
+  const params=new URLSearchParams(window.location.search);
+  const joinId=params.get('join');
+  if(joinId){window.history.replaceState({},'',window.location.pathname);socket.on('connect',()=>{setTimeout(()=>{socket.emit('join_game',{gameId:joinId,name:nameRef.current||'Гость'});setScr('onlineWait');setWaitInfo({gameId:joinId,current:0,max:0})},300)})}
   socket.on('game_start',({seed,playerIndex,playerCount})=>{
     myPI.current=playerIndex;
     const npc=playerCount;setPc(npc);pcR.current=npc;
@@ -266,16 +285,25 @@ const fmt=s=>`${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 
 // Menu
 if(scr==="menu")return(<div style={WRAP}>
-<div style={{textAlign:"center",marginBottom:20}}><div style={{fontSize:52,animation:"bob 2s ease-in-out infinite"}}>🎰</div>
+<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:52,animation:"bob 2s ease-in-out infinite"}}>🎰</div>
 <h1 style={{fontSize:34,fontWeight:900,background:"linear-gradient(180deg,#FFD54F,#FF8F00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:0}}>GEM RUSH</h1>
 {streak>0&&<div style={{display:"inline-block",marginTop:4,padding:"3px 14px",borderRadius:12,background:"linear-gradient(180deg,#FF6D00,#E65100)",fontSize:12,fontWeight:800,color:"#FFE082"}}>🔥 Серия: {streak}</div>}
+</div>
+<div style={{width:"100%",marginBottom:12}}>
+<div style={{position:"relative"}}><input value={name} onChange={e=>saveName(e.target.value.slice(0,16))} placeholder="Твоё имя..." maxLength={16} style={{width:"100%",padding:"10px 40px 10px 16px",borderRadius:14,border:"2px solid #334155",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:16,fontWeight:700,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+<span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",fontSize:18}}>🦊</span></div>
 </div>
 <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
 <button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,width:"100%",fontSize:18}}>🧘 Соло — тренировка</button>
 <button onClick={()=>setScr('botSetup')} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #7C83FF50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#7C83FF,#5C6BC0)",color:"#fff",boxShadow:"0 5px 0 #3949AB,0 0 30px rgba(124,131,255,0.3)"}}>🤖 Против ботов</button>
 <button onClick={()=>{setScr('onlineLobby');socketRef.current?.emit('list_games')}} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #FF6B6B50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#FF6B6B,#E53935)",color:"#fff",boxShadow:"0 5px 0 #C62828,0 0 30px rgba(255,107,107,0.3)"}}>🌐 Онлайн мультиплеер</button>
 </div>
-<div style={{marginTop:16,fontSize:11,color:"#475569",fontWeight:600,textAlign:"center"}}>Match-3 гонка — первый до 1000 очков!</div>
+<div style={{marginTop:16,display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%"}}>
+<div style={{fontSize:11,color:"#475569",fontWeight:600}}>Match-3 гонка — первый до 1000!</div>
+<div style={{display:"flex",alignItems:"center",gap:8}}>
+<button onClick={toggleSound} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,padding:2,opacity:.7}}>{soundOn?'🔊':'🔇'}</button>
+{onlineCount>0&&<div style={{fontSize:11,color:"#66BB6A",fontWeight:800}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#66BB6A",marginRight:3,animation:"pulse 2s infinite"}}></span>{onlineCount}</div>}
+</div></div>
 </div>);
 
 // Bot setup
@@ -297,7 +325,7 @@ if(scr==="onlineLobby")return(<div style={WRAP}>
 <div style={{width:"100%",flex:1}}>
 <div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Доступные игры ({gamesList.length})</div>
 {gamesList.length===0?<div style={{background:CARD,borderRadius:16,padding:"24px 16px",textAlign:"center",border:"1px solid #334155"}}><div style={{fontSize:36,marginBottom:8}}>🏜️</div><div style={{fontSize:14,color:"#64748b",fontWeight:700}}>Пока нет игр</div><div style={{fontSize:12,color:"#475569",marginTop:4}}>Создай первую!</div></div>
-:gamesList.map(g=><div key={g.id} onClick={()=>socketRef.current?.emit('join_game',{gameId:g.id})} style={{background:CARD,borderRadius:16,padding:"12px 16px",marginBottom:8,border:"1px solid #334155",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+:gamesList.map(g=><div key={g.id} onClick={()=>socketRef.current?.emit('join_game',{gameId:g.id,name:name||'Гость'})} style={{background:CARD,borderRadius:16,padding:"12px 16px",marginBottom:8,border:"1px solid #334155",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <div><div style={{fontSize:14,fontWeight:800,color:"#fff"}}>⚔️ {g.maxPlayers===2?"1v1":g.maxPlayers===3?"1v2":"1v3"}</div>
 <div style={{fontSize:11,color:"#64748b",fontWeight:600}}>{g.fee>0?`💰 $${g.fee}`:"🆓 Бесплатно"}</div></div>
 <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:900,color:g.currentPlayers<g.maxPlayers?"#66BB6A":"#FF5252"}}>{g.currentPlayers}/{g.maxPlayers}</div>
@@ -314,7 +342,7 @@ if(scr==="createGame")return(<div style={WRAP}>
 <div style={{background:CARD,borderRadius:28,padding:"20px 16px",width:"100%",border:"2px solid #FF6B6B30"}}>
 <div style={{marginBottom:14}}><div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚔️ Формат</div><div style={{display:"flex",gap:6}}>{[2,3,4].map(n=><button key={n} onClick={()=>setCreatePc(n)} style={{flex:1,padding:"9px 0",borderRadius:12,cursor:"pointer",fontWeight:800,fontSize:14,background:createPc===n?"linear-gradient(180deg,#FF6B6B,#E53935)":"rgba(255,255,255,0.05)",border:createPc===n?"2px solid #FF6B6B":"2px solid #334155",color:createPc===n?"#fff":"#64748b"}}>{n===2?"1v1":n===3?"1v2":"1v3"}</button>)}</div></div>
 <div style={{marginBottom:14}}><div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>💰 Ставка</div><div style={{display:"flex",gap:5}}>{[0,.5,1,2,5].map(f=><button key={f} onClick={()=>setCreateFee(f)} style={{flex:1,padding:"9px 0",borderRadius:12,cursor:"pointer",fontWeight:800,fontSize:13,background:createFee===f?"linear-gradient(180deg,#FFD54F,#FF8F00)":"rgba(255,255,255,0.05)",border:createFee===f?"2px solid #FFB300":"2px solid #334155",color:createFee===f?"#5D4037":"#64748b"}}>{f===0?"Free":`$${f}`}</button>)}</div></div>
-<button onClick={()=>{socketRef.current?.emit('create_game',{maxPlayers:createPc,fee:createFee});setScr('onlineWait')}} style={{...BTN_GOLD,width:"100%"}}>🚀 Создать</button>
+<button onClick={()=>{socketRef.current?.emit('create_game',{maxPlayers:createPc,fee:createFee,name:name||'Гость'});setScr('onlineWait')}} style={{...BTN_GOLD,width:"100%"}}>🚀 Создать</button>
 <button onClick={()=>setScr('onlineLobby')} style={{...BTN_SEC,width:"100%",marginTop:6}}>← Назад</button>
 </div></div>);
 
@@ -325,7 +353,14 @@ if(scr==="onlineWait")return(<div style={{...WRAP,justifyContent:"center"}}>
 <h2 style={{fontSize:22,fontWeight:900,color:"#fff",margin:"12px 0 8px"}}>Ждём игроков...</h2>
 {waitInfo&&<><div style={{fontSize:36,fontWeight:900,color:"#FF6B6B",margin:"8px 0"}}>{waitInfo.current} / {waitInfo.max}</div>
 <div style={{fontSize:13,color:"#94a3b8",fontWeight:600}}>{waitInfo.max-waitInfo.current} мест свободно</div></>}
-<div style={{display:"flex",justifyContent:"center",gap:8,margin:"16px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:12,height:12,borderRadius:6,background:"#FF6B6B",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
+{shareUrl&&<div style={{margin:"12px 0"}}>
+<div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Пригласи друга</div>
+<div style={{background:"rgba(255,255,255,0.06)",borderRadius:12,padding:"8px 12px",border:"1px solid #334155",fontSize:12,color:"#94a3b8",wordBreak:"break-all",fontFamily:"monospace",marginBottom:8}}>{shareUrl}</div>
+<div style={{display:"flex",gap:6,justifyContent:"center"}}>
+<button onClick={copyInvite} style={{...BTN_SEC,padding:"8px 20px",fontSize:13,fontWeight:800,background:copied?"rgba(102,187,106,0.15)":"rgba(255,255,255,0.05)",color:copied?"#66BB6A":"#94a3b8",border:copied?"1px solid #66BB6A":"1px solid #334155"}}>{copied?'Скопировано!':'📋 Копировать'}</button>
+{navigator.share&&<button onClick={()=>navigator.share({title:'Gem Rush',text:'Давай играть в Gem Rush!',url:shareUrl}).catch(()=>{})} style={{...BTN_SEC,padding:"8px 20px",fontSize:13,fontWeight:800}}>📤 Поделиться</button>}
+</div></div>}
+<div style={{display:"flex",justifyContent:"center",gap:8,margin:"12px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:12,height:12,borderRadius:6,background:"#FF6B6B",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
 <button onClick={()=>{socketRef.current?.emit('leave_game');setScr('onlineLobby')}} style={{...BTN_SEC,padding:"10px 28px"}}>Отмена</button>
 </div></div>);
 
@@ -342,7 +377,10 @@ return(<div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection
 {hasTimer?<div style={{padding:"4px 12px",borderRadius:12,fontWeight:900,fontSize:16,fontFamily:"monospace",background:tl<=20?"linear-gradient(180deg,#FF8A80,#E53935)":"rgba(255,255,255,0.08)",color:tl<=20?"#fff":"#94a3b8",border:tl<=20?"2px solid #C62828":"1px solid #334155",animation:tl<=10?"pulse .5s infinite":"none"}}>⏱{fmt(tl)}</div>
 :<div style={{padding:"4px 12px",borderRadius:12,background:"rgba(255,255,255,0.08)",color:"#94a3b8",fontSize:14,fontWeight:700,border:"1px solid #334155"}}>🧘 Соло</div>}
 <div style={{textAlign:"center"}}><div style={{fontSize:9,color:"#64748b",fontWeight:700}}>ДО ПОБЕДЫ</div><div style={{fontSize:18,fontWeight:900,color:"#FFD54F",fontFamily:"monospace"}}>{scores[0]}/{TARGET}</div></div>
-<div style={{padding:"4px 12px",borderRadius:12,background:"rgba(255,255,255,0.08)",border:"1px solid #33415530",fontSize:12,fontWeight:800,color:"#94a3b8"}}>{mode==='online'?'🌐':mode==='bot'?'🤖':'🧘'}</div>
+<div style={{display:"flex",alignItems:"center",gap:4}}>
+<button onClick={toggleSound} style={{background:"rgba(255,255,255,0.08)",border:"1px solid #33415530",borderRadius:10,padding:"4px 8px",cursor:"pointer",fontSize:14}}>{soundOn?'🔊':'🔇'}</button>
+<div style={{padding:"4px 8px",borderRadius:10,background:"rgba(255,255,255,0.08)",border:"1px solid #33415530",fontSize:12,fontWeight:800,color:"#94a3b8"}}>{mode==='online'?'🌐':mode==='bot'?'🤖':'🧘'}</div>
+</div>
 </div>
 <div style={{padding:"0 12px 4px",zIndex:1,position:"relative"}}><div style={{height:10,borderRadius:5,background:"rgba(255,255,255,.08)",overflow:"hidden",border:"1px solid rgba(255,255,255,.05)",position:"relative"}}><div style={{height:"100%",width:`${pct0}%`,borderRadius:4,background:"linear-gradient(90deg,#FFD54F,#FF8F00)",transition:"width .3s",boxShadow:pct0>70?"0 0 12px rgba(255,152,0,.5)":"none"}}/>{MILES.map(m=><div key={m} style={{position:"absolute",top:0,left:`${m/TARGET*100}%`,width:2,height:"100%",background:scores[0]>=m?"#FFD54F":"rgba(255,255,255,.2)"}}/>)}</div></div>
 {spTip&&<div style={{position:"absolute",top:80,left:"50%",transform:"translateX(-50%)",zIndex:200,background:CARD,color:"#FFD54F",padding:"8px 18px",borderRadius:16,fontSize:13,fontWeight:800,border:"2px solid #FFD54F40",animation:"bIn .3s",whiteSpace:"nowrap"}}>{spTip}</div>}
@@ -356,6 +394,8 @@ return(<div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection
 {comboShow&&<div style={{textAlign:"center",padding:"1px 0",zIndex:2,animation:"cmIn .3s"}}><span style={{display:"inline-block",padding:"3px 16px",borderRadius:16,background:"linear-gradient(180deg,#FF6D00,#E65100)",color:"#fff",fontSize:16,fontWeight:900,border:"2px solid #FFB74D"}}>🔥 КОМБО x{comboShow}!</span></div>}
 {scorePop&&<div style={{position:"absolute",top:"35%",left:`${scorePop.x}%`,zIndex:100,fontSize:24,fontWeight:900,color:"#FFD54F",textShadow:"0 0 12px rgba(255,213,79,0.5)",animation:"fUp .9s ease-out forwards",pointerEvents:"none"}}>+{scorePop.pts}</div>}
 <div style={{padding:"2px 8px",flex:1,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}><CB grid={grid} sel={sel} locked={locked} flash={flash} hint={hint} cursors={mode==='bot'?cursors:null} parts={parts} onCell={click} swapAnim={swapAnim} fallAnims={fallAnims}/></div>
+{emoteShow&&<div style={{position:"absolute",top:"25%",left:"50%",transform:"translateX(-50%)",zIndex:200,fontSize:48,animation:"bIn .3s",pointerEvents:"none"}}>{emoteShow.emoji}</div>}
+{mode==='online'&&!win&&<div style={{display:"flex",justifyContent:"center",gap:6,padding:"2px 10px",zIndex:1}}>{['👏','🔥','😤','💪','😎','🎯'].map(e=><button key={e} onClick={()=>socketRef.current?.emit('emote',{emoji:e})} style={{background:"rgba(255,255,255,0.06)",border:"1px solid #33415520",borderRadius:10,padding:"2px 8px",cursor:"pointer",fontSize:16}}>{e}</button>)}</div>}
 <div style={{padding:"4px 10px 8px",display:"flex",gap:3,overflowX:"auto",background:"rgba(255,255,255,.03)",borderTop:"1px solid rgba(255,255,255,.05)",zIndex:1}}>{log.slice(0,4).map((m,i)=>(<div key={i} style={{flexShrink:0,padding:"3px 8px",borderRadius:10,background:"rgba(255,255,255,.05)",border:`1px solid ${m.c}25`,fontSize:10,fontWeight:700,opacity:1-i*.2,whiteSpace:"nowrap"}}><span style={{color:m.c}}>{m.p}</span> <span style={{color:"#66BB6A"}}>+{m.pts}</span>{m.d>0&&<span style={{color:"#FF5252"}}> 🔥x{m.d+1}</span>}{m.s&&" ✨"}</div>))}{log.length===0&&<div style={{fontSize:11,color:"#64748b",fontWeight:700,padding:3}}>👆 Тапни фрукт!</div>}</div>
 {win&&(<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,backdropFilter:"blur(8px)",animation:"fIn .4s"}}>
 {win==="you"&&<Conf/>}
@@ -371,7 +411,8 @@ return(<div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection
 <p style={{fontSize:14,color:"#94a3b8",fontWeight:800}}>{scores[0]} очков</p>
 {lostBy>0&&<div style={{marginTop:4,padding:"4px 14px",borderRadius:10,display:"inline-block",background:"rgba(255,82,82,0.1)",border:"1px solid rgba(255,82,82,0.2)",fontSize:13,fontWeight:800,color:"#FF5252"}}>Не хватило {lostBy} очков!</div>}
 </>)}
-<div style={{marginTop:12,display:"flex",gap:6}}>
+<button onClick={shareResult} style={{...BTN_SEC,width:"100%",marginTop:10,fontSize:13,fontWeight:800,color:"#66BB6A",border:"1px solid #66BB6A40"}}>{copied?'Скопировано!':'📤 Поделиться результатом'}</button>
+<div style={{marginTop:8,display:"flex",gap:6}}>
 <button onClick={goMenu} style={{...BTN_SEC,flex:1}}>Меню</button>
 {mode==='solo'&&<button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,flex:2,fontSize:16}}>🔄 Ещё раз</button>}
 {mode==='bot'&&<button onClick={()=>startLocal('bot',pc,fee)} style={{...BTN_GOLD,flex:2,fontSize:16}}>⚡ Реванш</button>}

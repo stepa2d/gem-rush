@@ -13,6 +13,8 @@ app.use(express.static(join(__dirname, '../dist')));
 app.get('/{*path}', (req, res) => res.sendFile(join(__dirname, '../dist/index.html')));
 
 const games = new Map();
+const leaderboard = [];
+let onlineCount = 0;
 const genId = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 
 const pubGame = g => ({
@@ -61,6 +63,14 @@ function endGame(id, reason) {
       s.data.gameId = null;
     }
   });
+  // Update leaderboard
+  g.players.forEach((p, i) => {
+    if (g.scores[i] > 0) {
+      leaderboard.push({ name: p.name, score: g.scores[i], date: Date.now() });
+    }
+  });
+  leaderboard.sort((a, b) => b.score - a.score);
+  if (leaderboard.length > 50) leaderboard.length = 50;
   setTimeout(() => games.delete(id), 10000);
   broadcastList();
 }
@@ -81,15 +91,18 @@ setInterval(() => {
 }, 60000);
 
 io.on('connection', (socket) => {
+  onlineCount++;
+  io.emit('online_count', onlineCount);
   const list = [...games.values()].filter(g => g.status === 'waiting').map(pubGame);
   socket.emit('games_list', list);
+  socket.emit('online_count', onlineCount);
 
-  socket.on('create_game', ({ maxPlayers, fee }) => {
+  socket.on('create_game', ({ maxPlayers, fee, name }) => {
     const id = genId();
     const g = {
       id, maxPlayers: Math.max(2, Math.min(4, maxPlayers || 2)),
       fee: fee || 0, status: 'waiting',
-      players: [{ id: socket.id, index: 0, name: 'Игрок 1' }],
+      players: [{ id: socket.id, index: 0, name: (name || 'Игрок 1').slice(0, 16) }],
       scores: [], seed: null, timer: null, createdAt: Date.now()
     };
     games.set(id, g);
@@ -104,14 +117,14 @@ io.on('connection', (socket) => {
     socket.emit('games_list', [...games.values()].filter(g => g.status === 'waiting').map(pubGame));
   });
 
-  socket.on('join_game', ({ gameId }) => {
+  socket.on('join_game', ({ gameId, name }) => {
     const g = games.get(gameId);
     if (!g || g.status !== 'waiting') return socket.emit('join_error', { message: 'Игра не найдена' });
     if (g.players.length >= g.maxPlayers) return socket.emit('join_error', { message: 'Игра заполнена' });
     if (g.players.find(p => p.id === socket.id)) return socket.emit('join_error', { message: 'Вы уже в игре' });
 
     const pi = g.players.length;
-    g.players.push({ id: socket.id, index: pi, name: `Игрок ${pi + 1}` });
+    g.players.push({ id: socket.id, index: pi, name: (name || `Игрок ${pi + 1}`).slice(0, 16) });
     socket.data.gameId = gameId;
     socket.data.playerIndex = pi;
     socket.join(gameId);
@@ -136,6 +149,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('emote', ({ emoji }) => {
+    const gid = socket.data.gameId, pi = socket.data.playerIndex;
+    if (!gid || pi === undefined) return;
+    io.to(gid).emit('emote', { playerIndex: pi, emoji: String(emoji).slice(0, 4) });
+  });
+
+  socket.on('get_leaderboard', () => {
+    socket.emit('leaderboard', leaderboard.slice(0, 10));
+  });
+
   socket.on('score_update', ({ score }) => {
     const gid = socket.data.gameId, pi = socket.data.playerIndex;
     if (!gid || pi === undefined || !games.has(gid)) return;
@@ -147,6 +170,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    onlineCount = Math.max(0, onlineCount - 1);
+    io.emit('online_count', onlineCount);
     const gid = socket.data.gameId;
     if (!gid || !games.has(gid)) return;
     const g = games.get(gid);
