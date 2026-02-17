@@ -20,7 +20,7 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Seymour+One&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Seymour+One&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
@@ -34,8 +34,9 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script>window.onerror=function(m,u,l,c,e){document.getElementById('root').innerHTML='<pre style="color:#ff5252;padding:20px;font-size:14px;word-wrap:break-word">'+m+'\n'+u+':'+l+':'+c+'</pre>'}</script>
+    <div id="root"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column"><div style="font-size:48px;animation:spin 1s linear infinite">🍎</div><div style="color:#FFD54F;font-size:18px;font-weight:bold;margin-top:16px">Загрузка...</div></div></div>
+    <style>@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}</style>
+    <script>window.onerror=function(m,u,l,c,e){document.getElementById('root').innerHTML='<pre style="color:#ff5252;padding:20px;font-size:14px;word-wrap:break-word">ERROR: '+m+'\n'+u+':'+l+':'+c+'</pre>'};window.addEventListener('unhandledrejection',function(e){document.getElementById('root').innerHTML='<pre style="color:#ff5252;padding:20px;font-size:14px;word-wrap:break-word">PROMISE ERROR: '+e.reason+'</pre>'})</script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
