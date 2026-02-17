@@ -80,7 +80,7 @@ const Conf=()=><div style={{position:"absolute",inset:0,pointerEvents:"none",ove
 // Shared styles
 const BG="linear-gradient(180deg,#1a1a2e,#16213e,#0f3460)";
 const CARD="linear-gradient(180deg,#1e293b,#0f172a)";
-const WRAP={minHeight:"100vh",background:BG,display:"flex",flexDirection:"column",alignItems:"center",fontFamily:"'Nunito',sans-serif",padding:"24px 16px",maxWidth:420,margin:"0 auto"};
+const WRAP={minHeight:"100vh",background:BG,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",padding:"24px 16px",maxWidth:420,margin:"0 auto"};
 const BTN_GOLD={padding:"14px 0",borderRadius:18,border:"2px solid #FFD54F50",cursor:"pointer",fontWeight:900,fontSize:20,background:"linear-gradient(180deg,#FFD54F,#FF8F00)",color:"#5D4037",boxShadow:"0 5px 0 #E65100,0 0 30px rgba(255,213,79,0.3)"};
 const BTN_SEC={padding:"10px 0",borderRadius:14,border:"1px solid #334155",cursor:"pointer",fontWeight:700,fontSize:14,background:"rgba(255,255,255,0.05)",color:"#94a3b8"};
 
@@ -272,8 +272,8 @@ const fmt=s=>`${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 
 // Menu
 if(scr==="menu")return(<div style={WRAP}>
-<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:52,animation:"bob 2s ease-in-out infinite"}}>🎰</div>
-<h1 style={{fontSize:34,fontWeight:900,background:"linear-gradient(180deg,#FFD54F,#FF8F00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:0}}>GEM RUSH</h1>
+<div style={{textAlign:"center",marginBottom:24}}><div style={{display:"flex",justifyContent:"center",gap:4,animation:"bob 2s ease-in-out infinite"}}><img src="/fruits/pomegranate.png" alt="" style={{width:80,height:80}}/><img src="/fruits/pomegranate.png" alt="" style={{width:80,height:80}}/><img src="/fruits/pomegranate.png" alt="" style={{width:80,height:80}}/></div>
+<h1 style={{fontSize:44,fontWeight:900,background:"linear-gradient(180deg,#FFD54F,#FF8F00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"8px 0 0"}}>GEM RUSH</h1>
 {streak>0&&<div style={{display:"inline-block",marginTop:4,padding:"3px 14px",borderRadius:12,background:"linear-gradient(180deg,#FF6D00,#E65100)",fontSize:12,fontWeight:800,color:"#FFE082"}}>🔥 Серия: {streak}</div>}
 </div>
 <div style={{width:"100%",marginBottom:12}}>
