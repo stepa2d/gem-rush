@@ -78,11 +78,13 @@ const hc=e=>{const rc=ref.current.getBoundingClientRect();const x=(e.clientX-rc.
 return <canvas ref={ref} onClick={hc} style={{width:"100%",maxWidth:BPX,aspectRatio:"1",borderRadius:18,cursor:"pointer",touchAction:"manipulation",boxShadow:"0 6px 0 #3E2723, 0 10px 30px rgba(0,0,0,0.3)"}}/>};
 const Conf=()=><div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",zIndex:310}}>{Array.from({length:50}).map((_,i)=><div key={i} style={{position:"absolute",left:`${Math.random()*100}%`,top:"-5%",width:Math.random()*10+6,height:Math.random()*14+6,borderRadius:Math.random()>.5?"50%":"2px",background:["#FF6B6B","#FFD93D","#6BCB77","#4D96FF","#FF9F43","#A29BFE","#FD79A8","#00B894"][i%8],animation:`cF ${2+Math.random()*3}s linear ${Math.random()*1.5}s forwards`,transform:`rotate(${Math.random()*360}deg)`}}/>)}</div>;
 // Shared styles
-const BG="linear-gradient(180deg,#1a1a2e,#16213e,#0f3460)";
-const CARD="linear-gradient(180deg,#1e293b,#0f172a)";
-const WRAP={minHeight:"100vh",background:BG,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",padding:"24px 16px",maxWidth:420,margin:"0 auto"};
-const BTN_GOLD={padding:"14px 0",borderRadius:18,border:"2px solid #FFD54F50",cursor:"pointer",fontWeight:900,fontSize:20,background:"linear-gradient(180deg,#FFD54F,#FF8F00)",color:"#5D4037",boxShadow:"0 5px 0 #E65100,0 0 30px rgba(255,213,79,0.3)"};
-const BTN_SEC={padding:"10px 0",borderRadius:14,border:"1px solid #334155",cursor:"pointer",fontWeight:700,fontSize:14,background:"rgba(255,255,255,0.05)",color:"#94a3b8"};
+const BG="linear-gradient(180deg,#0a0a1a 0%,#0d1333 30%,#1a0a2e 60%,#0a0a1a 100%)";
+const CARD="linear-gradient(180deg,rgba(30,20,60,0.85),rgba(15,10,40,0.95))";
+const WRAP={minHeight:"100vh",background:BG,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",padding:"24px 16px",maxWidth:420,margin:"0 auto",position:"relative",overflow:"hidden"};
+const BTN_GOLD={padding:"16px 0",borderRadius:20,border:"none",cursor:"pointer",fontWeight:900,fontSize:20,fontFamily:"'Nunito',sans-serif",background:"linear-gradient(180deg,#FFE082,#FFD54F 30%,#FF8F00 90%,#E65100)",color:"#5D4037",boxShadow:"0 6px 0 #BF360C,0 0 20px rgba(255,213,79,0.4),inset 0 1px 0 rgba(255,255,255,0.4)",textShadow:"0 1px 0 rgba(255,255,255,0.3)",letterSpacing:.5,transition:"transform 0.1s,box-shadow 0.1s"};
+const BTN_SEC={padding:"12px 0",borderRadius:16,border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"'Nunito',sans-serif",background:"rgba(255,255,255,0.06)",color:"#94a3b8",backdropFilter:"blur(8px)",transition:"transform 0.1s"};
+// Sparkle background for lobby
+const LobbyBG=()=><><div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 50% 0%,rgba(124,58,237,0.15) 0%,transparent 60%)",pointerEvents:"none"}}/><div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 50% 100%,rgba(255,152,0,0.08) 0%,transparent 50%)",pointerEvents:"none"}}/>{Array.from({length:20}).map((_,i)=><div key={i} style={{position:"absolute",left:`${(i*17+7)%100}%`,top:`${(i*23+11)%100}%`,width:2+i%3,height:2+i%3,borderRadius:"50%",background:i%3===0?"#FFD54F":i%3===1?"#CE93D8":"#90CAF9",opacity:.15+Math.random()*.25,animation:`sparkle ${2+i%3}s ease-in-out ${i*.3}s infinite alternate`,pointerEvents:"none"}}/>)}</>;
 
 export default function GemRush(){
 const[scr,setScr]=useState("menu");
@@ -272,64 +274,76 @@ const fmt=s=>`${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 
 // Menu
 if(scr==="menu")return(<div style={WRAP}>
-<div style={{textAlign:"center",marginBottom:24}}><div style={{display:"flex",justifyContent:"center",gap:4,animation:"bob 2s ease-in-out infinite"}}><img src="/fruits/pomegranate.png" alt="" style={{width:80,height:80}}/><img src="/fruits/pomegranate.png" alt="" style={{width:80,height:80}}/><img src="/fruits/pomegranate.png" alt="" style={{width:80,height:80}}/></div>
-<h1 style={{fontSize:44,fontWeight:900,background:"linear-gradient(180deg,#FFD54F,#FF8F00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"8px 0 0"}}>GEM RUSH</h1>
-{streak>0&&<div style={{display:"inline-block",marginTop:4,padding:"3px 14px",borderRadius:12,background:"linear-gradient(180deg,#FF6D00,#E65100)",fontSize:12,fontWeight:800,color:"#FFE082"}}>🔥 Серия: {streak}</div>}
+<LobbyBG/>
+<div style={{position:"relative",zIndex:1,textAlign:"center",marginBottom:20}}>
+<div style={{position:"relative",display:"inline-block"}}>
+<div style={{position:"absolute",inset:"-30px -40px",background:"radial-gradient(ellipse,rgba(255,193,7,0.2) 0%,transparent 70%)",animation:"glowPulse 3s ease-in-out infinite",pointerEvents:"none"}}/>
+<div style={{display:"flex",justifyContent:"center",alignItems:"end",gap:0,animation:"logoFloat 3s ease-in-out infinite",filter:"drop-shadow(0 8px 20px rgba(255,152,0,0.4))"}}>
+<img src="/fruits/pomegranate.png" alt="" style={{width:72,height:72,transform:"rotate(-12deg) translateY(4px)",animation:"fruitBob1 2.5s ease-in-out infinite"}}/>
+<img src="/fruits/pomegranate.png" alt="" style={{width:90,height:90,position:"relative",zIndex:2,animation:"fruitBob2 2.5s ease-in-out 0.15s infinite"}}/>
+<img src="/fruits/pomegranate.png" alt="" style={{width:72,height:72,transform:"rotate(12deg) translateY(4px)",animation:"fruitBob3 2.5s ease-in-out 0.3s infinite"}}/>
 </div>
-<div style={{width:"100%",marginBottom:12}}>
-<div style={{position:"relative"}}><input value={name} onChange={e=>saveName(e.target.value.slice(0,16))} placeholder="Твоё имя..." maxLength={16} style={{width:"100%",padding:"10px 40px 10px 16px",borderRadius:14,border:"2px solid #334155",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:16,fontWeight:700,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
-<span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",fontSize:18}}>🦊</span></div>
 </div>
-<div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
-<button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,width:"100%",fontSize:18}}>🧘 Соло — тренировка</button>
-<button onClick={()=>setScr('botSetup')} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #7C83FF50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#7C83FF,#5C6BC0)",color:"#fff",boxShadow:"0 5px 0 #3949AB,0 0 30px rgba(124,131,255,0.3)"}}>🤖 Против ботов</button>
-<button onClick={()=>setScr('online')} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #FF6B6B50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#FF6B6B,#E53935)",color:"#fff",boxShadow:"0 5px 0 #C62828,0 0 30px rgba(255,107,107,0.3)"}}>🌐 Онлайн</button>
+<h1 style={{fontFamily:"'Seymour One',sans-serif",fontSize:48,background:"linear-gradient(180deg,#FFF8E1 0%,#FFD54F 25%,#FF8F00 70%,#E65100 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"6px 0 0",filter:"drop-shadow(0 3px 6px rgba(255,152,0,0.5))",letterSpacing:2}}>GEM RUSH</h1>
+<div style={{fontSize:13,color:"rgba(255,213,79,0.6)",fontWeight:700,letterSpacing:3,textTransform:"uppercase",marginTop:2}}>Match-3 PvP</div>
+{streak>0&&<div style={{display:"inline-block",marginTop:8,padding:"4px 18px",borderRadius:20,background:"linear-gradient(180deg,#FF6D00,#E65100)",fontSize:13,fontWeight:800,color:"#FFE082",boxShadow:"0 0 15px rgba(255,109,0,0.4)",animation:"pulseBtn 2s ease-in-out infinite"}}>🔥 Серия: {streak}</div>}
 </div>
-<div style={{marginTop:16,display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%"}}>
-<div style={{fontSize:11,color:"#475569",fontWeight:600}}>Match-3 гонка — первый до 1000!</div>
+<div style={{width:"100%",marginBottom:14,position:"relative",zIndex:1}}>
+<div style={{position:"relative"}}><input value={name} onChange={e=>saveName(e.target.value.slice(0,16))} placeholder="Твоё имя..." maxLength={16} style={{width:"100%",padding:"12px 44px 12px 18px",borderRadius:16,border:"2px solid rgba(124,58,237,0.3)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:16,fontWeight:700,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box",backdropFilter:"blur(8px)",boxShadow:"inset 0 2px 8px rgba(0,0,0,0.3)"}}/>
+<span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:20}}>🦊</span></div>
+</div>
+<div style={{width:"100%",display:"flex",flexDirection:"column",gap:10,position:"relative",zIndex:1}}>
+<button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,width:"100%",fontSize:18,animation:"pulseBtn 3s ease-in-out infinite"}}>🧘 Соло — тренировка</button>
+<button onClick={()=>setScr('botSetup')} style={{width:"100%",padding:"16px 0",borderRadius:20,border:"none",cursor:"pointer",fontWeight:900,fontSize:18,fontFamily:"'Nunito',sans-serif",background:"linear-gradient(180deg,#B388FF,#7C4DFF 30%,#651FFF 90%,#4527A0)",color:"#fff",boxShadow:"0 6px 0 #311B92,0 0 20px rgba(124,77,255,0.3),inset 0 1px 0 rgba(255,255,255,0.2)",textShadow:"0 2px 4px rgba(0,0,0,0.3)",letterSpacing:.5,transition:"transform 0.1s"}}>🤖 Против ботов</button>
+<button onClick={()=>setScr('online')} style={{width:"100%",padding:"16px 0",borderRadius:20,border:"none",cursor:"pointer",fontWeight:900,fontSize:18,fontFamily:"'Nunito',sans-serif",background:"linear-gradient(180deg,#FF8A80,#FF5252 30%,#E53935 90%,#B71C1C)",color:"#fff",boxShadow:"0 6px 0 #7f0000,0 0 20px rgba(255,82,82,0.3),inset 0 1px 0 rgba(255,255,255,0.2)",textShadow:"0 2px 4px rgba(0,0,0,0.3)",letterSpacing:.5,transition:"transform 0.1s",animation:"glowRed 3s ease-in-out 1.5s infinite"}}>🌐 Онлайн</button>
+</div>
+<div style={{marginTop:18,display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",position:"relative",zIndex:1}}>
+<div style={{fontSize:11,color:"rgba(255,255,255,0.25)",fontWeight:600}}>Первый до 1000 побеждает!</div>
 <div style={{display:"flex",alignItems:"center",gap:8}}>
-<button onClick={toggleSound} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,padding:2,opacity:.7}}>{soundOn?'🔊':'🔇'}</button>
-{onlineCount>0&&<div style={{fontSize:11,color:"#66BB6A",fontWeight:800}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#66BB6A",marginRight:3,animation:"pulse 2s infinite"}}></span>{onlineCount}</div>}
+<button onClick={toggleSound} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,cursor:"pointer",fontSize:18,padding:"4px 8px",backdropFilter:"blur(4px)"}}>{soundOn?'🔊':'🔇'}</button>
+{onlineCount>0&&<div style={{fontSize:11,color:"#69F0AE",fontWeight:800,background:"rgba(105,240,174,0.08)",padding:"3px 10px",borderRadius:10,border:"1px solid rgba(105,240,174,0.2)"}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#69F0AE",marginRight:4,animation:"pulse 2s infinite",boxShadow:"0 0 6px #69F0AE"}}></span>{onlineCount}</div>}
 </div></div>
 </div>);
 
 // Bot setup
 if(scr==="botSetup"){const rk=fee<=.5?.15:fee<=2?.12:.1;const pool=+(fee*pc*(1-rk)).toFixed(2);
 return(<div style={WRAP}>
-<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:40}}>🤖</div><h2 style={{fontSize:24,fontWeight:900,color:"#fff",margin:"4px 0"}}>Против ботов</h2></div>
-<div style={{background:CARD,borderRadius:28,padding:"20px 16px",width:"100%",boxShadow:"0 0 30px rgba(0,0,0,0.2)",border:"2px solid #7C83FF30"}}>
+<LobbyBG/>
+<div style={{textAlign:"center",marginBottom:16,position:"relative",zIndex:1}}><div style={{fontSize:48,filter:"drop-shadow(0 4px 12px rgba(124,77,255,0.4))",animation:"bob 2s ease-in-out infinite"}}>🤖</div><h2 style={{fontFamily:"'Seymour One',sans-serif",fontSize:26,color:"#fff",margin:"4px 0",textShadow:"0 0 20px rgba(124,77,255,0.5)"}}>Против ботов</h2></div>
+<div style={{background:CARD,borderRadius:28,padding:"20px 16px",width:"100%",boxShadow:"0 0 30px rgba(124,77,255,0.15),inset 0 1px 0 rgba(255,255,255,0.05)",border:"1px solid rgba(124,77,255,0.2)",backdropFilter:"blur(12px)",position:"relative",zIndex:1}}>
 <div style={{marginBottom:14}}><div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚔️ Формат</div><div style={{display:"flex",gap:6}}>{[2,3,4].map(n=><button key={n} onClick={()=>setPc(n)} style={{flex:1,padding:"9px 0",borderRadius:12,cursor:"pointer",fontWeight:800,fontSize:14,background:pc===n?"linear-gradient(180deg,#7C83FF,#5C6BC0)":"rgba(255,255,255,0.05)",border:pc===n?"2px solid #7C83FF":"2px solid #334155",color:pc===n?"#fff":"#64748b"}}>{n===2?"1v1":n===3?"1v2":"1v3"}</button>)}</div></div>
 <div style={{marginBottom:14}}><div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>💰 Ставка</div><div style={{display:"flex",gap:5}}>{[0,.5,1,2,5].map(f=><button key={f} onClick={()=>setFee(f)} style={{flex:1,padding:"9px 0",borderRadius:12,cursor:"pointer",fontWeight:800,fontSize:13,background:fee===f?"linear-gradient(180deg,#FFD54F,#FF8F00)":"rgba(255,255,255,0.05)",border:fee===f?"2px solid #FFB300":"2px solid #334155",color:fee===f?"#5D4037":"#64748b"}}>{f===0?"Free":`$${f}`}</button>)}</div></div>
 <div style={{background:"rgba(124,131,255,0.05)",borderRadius:16,padding:12,marginBottom:14,border:"1px solid #7C83FF20"}}><div style={{fontSize:13,color:"#7C83FF",fontWeight:800}}>🏆 Первый до 1000 • ⏱ {TIME_S}сек</div>{fee>0&&<div style={{fontSize:12,color:"#FFD54F",fontWeight:700,marginTop:2}}>Приз: ${pool}</div>}</div>
-<button onClick={()=>startLocal('bot',pc,fee)} style={{...BTN_GOLD,width:"100%"}}>⚡ ИГРАТЬ</button>
-<button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:6}}>← Назад</button>
+<button onClick={()=>startLocal('bot',pc,fee)} style={{...BTN_GOLD,width:"100%",animation:"pulseBtn 2.5s ease-in-out infinite"}}>⚡ ИГРАТЬ</button>
+<button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:8}}>← Назад</button>
 </div></div>)}
 
 // Online — one screen: create + list
 if(scr==="online")return(<div style={WRAP}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",marginBottom:12}}>
-<h2 style={{fontSize:22,fontWeight:900,color:"#fff",margin:0}}>🌐 Онлайн</h2>
-{onlineCount>0&&<div style={{fontSize:12,color:"#66BB6A",fontWeight:800}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#66BB6A",marginRight:4,animation:"pulse 2s infinite"}}></span>{onlineCount} онлайн</div>}
+<LobbyBG/>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",marginBottom:14,position:"relative",zIndex:1}}>
+<h2 style={{fontFamily:"'Seymour One',sans-serif",fontSize:24,color:"#fff",margin:0,textShadow:"0 0 20px rgba(255,82,82,0.4)"}}>🌐 Онлайн</h2>
+{onlineCount>0&&<div style={{fontSize:12,color:"#69F0AE",fontWeight:800,background:"rgba(105,240,174,0.08)",padding:"4px 12px",borderRadius:12,border:"1px solid rgba(105,240,174,0.2)"}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#69F0AE",marginRight:4,animation:"pulse 2s infinite",boxShadow:"0 0 6px #69F0AE"}}></span>{onlineCount}</div>}
 </div>
 {myGameId?
-<div style={{width:"100%",background:CARD,borderRadius:20,padding:"20px 16px",marginBottom:12,border:"2px solid #FF6B6B40",textAlign:"center"}}>
-<div style={{fontSize:40,animation:"bob 2s ease-in-out infinite"}}>⏳</div>
-<div style={{fontSize:16,fontWeight:900,color:"#fff",margin:"8px 0"}}>Ждём соперника...</div>
-<div style={{fontSize:13,color:"#94a3b8",fontWeight:600,marginBottom:12}}>Когда кто-то присоединится — игра начнётся</div>
-<div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:12}}>{[0,1,2].map(i=><div key={i} style={{width:10,height:10,borderRadius:5,background:"#FF6B6B",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
-<button onClick={()=>{socketRef.current?.emit('leave_game');setMyGameId(null)}} style={{...BTN_SEC,padding:"8px 24px",fontSize:13}}>Отменить</button>
+<div style={{width:"100%",background:CARD,borderRadius:24,padding:"24px 16px",marginBottom:12,border:"1px solid rgba(255,82,82,0.2)",textAlign:"center",boxShadow:"0 0 30px rgba(255,82,82,0.1),inset 0 1px 0 rgba(255,255,255,0.05)",backdropFilter:"blur(12px)",position:"relative",zIndex:1}}>
+<div style={{fontSize:48,animation:"bob 2s ease-in-out infinite",filter:"drop-shadow(0 4px 12px rgba(255,152,0,0.4))"}}>⏳</div>
+<div style={{fontSize:17,fontWeight:900,color:"#fff",margin:"10px 0",textShadow:"0 0 15px rgba(255,255,255,0.2)"}}>Ждём соперника...</div>
+<div style={{fontSize:13,color:"rgba(255,255,255,0.4)",fontWeight:600,marginBottom:14}}>Когда кто-то присоединится — игра начнётся</div>
+<div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:14}}>{[0,1,2].map(i=><div key={i} style={{width:12,height:12,borderRadius:6,background:"linear-gradient(180deg,#FF8A80,#E53935)",boxShadow:"0 0 8px rgba(255,82,82,0.6)",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
+<button onClick={()=>{socketRef.current?.emit('leave_game');setMyGameId(null)}} style={{...BTN_SEC,padding:"10px 28px",fontSize:13}}>Отменить</button>
 </div>
-:<button onClick={()=>socketRef.current?.emit('create_game',{name:name||'Гость'})} style={{...BTN_GOLD,width:"100%",marginBottom:12,fontSize:16}}>➕ Создать игру</button>}
-<div style={{width:"100%",flex:1}}>
-<div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Открытые игры</div>
-{gamesList.length===0?<div style={{background:CARD,borderRadius:16,padding:"24px 16px",textAlign:"center",border:"1px solid #334155"}}><div style={{fontSize:36,marginBottom:8}}>🏜️</div><div style={{fontSize:14,color:"#64748b",fontWeight:700}}>Пока нет игр</div><div style={{fontSize:12,color:"#475569",marginTop:4}}>Создай первую!</div></div>
-:gamesList.map(g=><div key={g.id} onClick={()=>{if(!myGameId)socketRef.current?.emit('join_game',{gameId:g.id,name:name||'Гость'})}} style={{background:CARD,borderRadius:16,padding:"14px 16px",marginBottom:8,border:"1px solid #334155",cursor:myGameId?"default":"pointer",opacity:myGameId?.5:1,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+:<button onClick={()=>socketRef.current?.emit('create_game',{name:name||'Гость'})} style={{...BTN_GOLD,width:"100%",marginBottom:14,fontSize:17,position:"relative",zIndex:1,animation:"pulseBtn 2.5s ease-in-out infinite"}}>➕ Создать игру</button>}
+<div style={{width:"100%",flex:1,position:"relative",zIndex:1}}>
+<div style={{fontSize:11,color:"rgba(255,255,255,0.3)",fontWeight:800,textTransform:"uppercase",letterSpacing:2,marginBottom:8}}>Открытые игры</div>
+{gamesList.length===0?<div style={{background:CARD,borderRadius:20,padding:"28px 16px",textAlign:"center",border:"1px solid rgba(255,255,255,0.06)",backdropFilter:"blur(12px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.05)"}}><div style={{fontSize:40,marginBottom:8,opacity:.6}}>🏜️</div><div style={{fontSize:14,color:"rgba(255,255,255,0.3)",fontWeight:700}}>Пока нет игр</div><div style={{fontSize:12,color:"rgba(255,255,255,0.15)",marginTop:4}}>Создай первую!</div></div>
+:gamesList.map(g=><div key={g.id} onClick={()=>{if(!myGameId)socketRef.current?.emit('join_game',{gameId:g.id,name:name||'Гость'})}} style={{background:CARD,borderRadius:18,padding:"14px 16px",marginBottom:8,border:"1px solid rgba(255,255,255,0.06)",cursor:myGameId?"default":"pointer",opacity:myGameId?.5:1,display:"flex",justifyContent:"space-between",alignItems:"center",backdropFilter:"blur(12px)",boxShadow:"0 4px 15px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.05)",transition:"transform 0.15s"}}>
 <div><div style={{fontSize:15,fontWeight:800,color:"#fff"}}>{g.players[0]||'Гость'}</div>
-<div style={{fontSize:11,color:"#64748b",fontWeight:600}}>ждёт соперника</div></div>
-<div style={{padding:"6px 16px",borderRadius:12,background:"linear-gradient(180deg,#66BB6A,#43A047)",color:"#fff",fontWeight:800,fontSize:13}}>Играть</div>
+<div style={{fontSize:11,color:"rgba(255,255,255,0.3)",fontWeight:600}}>ждёт соперника</div></div>
+<div style={{padding:"8px 20px",borderRadius:14,background:"linear-gradient(180deg,#69F0AE,#00C853 50%,#00961F)",color:"#fff",fontWeight:800,fontSize:13,boxShadow:"0 4px 0 #005005,0 0 12px rgba(0,200,83,0.3)",textShadow:"0 1px 2px rgba(0,0,0,0.3)"}}>Играть</div>
 </div>)}
 </div>
-<button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:8}}>← Меню</button>
+<button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:10,position:"relative",zIndex:1}}>← Меню</button>
 </div>);
 
 // ===== GAME SCREEN =====
@@ -386,5 +400,5 @@ return(<div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection
 {mode==='bot'&&<button onClick={()=>startLocal('bot',pc,fee)} style={{...BTN_GOLD,flex:2,fontSize:16}}>⚡ Реванш</button>}
 {mode==='online'&&<button onClick={()=>{setWin(null);wR.current=null;setScr('online')}} style={{...BTN_GOLD,flex:2,fontSize:16}}>🔄 Ещё раз</button>}
 </div></div></div>)}
-<style>{`@keyframes bIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}@keyframes fIn{from{opacity:0}to{opacity:1}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-70px) scale(1.3)}}@keyframes cF{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}@keyframes cmIn{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.2) rotate(3deg)}100%{transform:scale(1) rotate(0);opacity:1}}@keyframes vP{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@keyframes pI{0%{transform:scale(0) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}@keyframes sS{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes pulseBtn{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}button:active{filter:brightness(.9)!important}`}</style>
+<style>{`@keyframes bIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}@keyframes fIn{from{opacity:0}to{opacity:1}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-70px) scale(1.3)}}@keyframes cF{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}@keyframes cmIn{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.2) rotate(3deg)}100%{transform:scale(1) rotate(0);opacity:1}}@keyframes vP{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@keyframes pI{0%{transform:scale(0) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}@keyframes sS{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes pulseBtn{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes fruitBob1{0%,100%{transform:rotate(-12deg) translateY(4px)}50%{transform:rotate(-8deg) translateY(-4px)}}@keyframes fruitBob2{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.05)}}@keyframes fruitBob3{0%,100%{transform:rotate(12deg) translateY(4px)}50%{transform:rotate(8deg) translateY(-4px)}}@keyframes glowPulse{0%,100%{opacity:.6}50%{opacity:1}}@keyframes sparkle{0%{opacity:.1;transform:scale(.8)}100%{opacity:.5;transform:scale(1.2)}}@keyframes glowRed{0%,100%{box-shadow:0 6px 0 #7f0000,0 0 20px rgba(255,82,82,0.3),inset 0 1px 0 rgba(255,255,255,0.2)}50%{box-shadow:0 6px 0 #7f0000,0 0 35px rgba(255,82,82,0.5),inset 0 1px 0 rgba(255,255,255,0.2)}}button:active{transform:scale(.97)!important;filter:brightness(.9)!important}`}</style>
 </div>)}
