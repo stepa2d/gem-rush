@@ -102,7 +102,8 @@ const[streak,setStreak]=useState(0);const[scorePop,setScorePop]=useState(null);
 const[swapAnim,setSwapAnim]=useState(null);const[fallAnims,setFallAnims]=useState(null);
 const[spTip,setSpTip]=useState(null);const[mileHit,setMileHit]=useState(null);const[milesR,setMilesR]=useState([]);
 // Online state
-const[searching,setSearching]=useState(false);
+const[gamesList,setGamesList]=useState([]);
+const[myGameId,setMyGameId]=useState(null);
 const[name,setName]=useState(()=>localStorage.getItem('gr_name')||'');
 const[soundOn,setSoundOn]=useState(()=>localStorage.getItem('gr_sound')!=='off');
 const[onlineCount,setOnlineCount]=useState(0);
@@ -137,7 +138,9 @@ useEffect(()=>{
   const socket=io(window.location.origin,{transports:["websocket","polling"]});
   socketRef.current=socket;
   socket.on('online_count',c=>setOnlineCount(c));
-  socket.on('searching',()=>setSearching(true));
+  socket.on('games_list',list=>setGamesList(list));
+  socket.on('game_created',({gameId})=>setMyGameId(gameId));
+  socket.on('game_expired',()=>{setMyGameId(null);setScr('online')});
   socket.on('emote',({playerIndex,emoji})=>{setEmoteShow({pi:playerIndex,emoji,t:Date.now()});setTimeout(()=>setEmoteShow(null),1800)});
   socket.on('game_start',({seed,playerIndex,playerCount})=>{
     myPI.current=playerIndex;
@@ -151,7 +154,7 @@ useEffect(()=>{
     setScorePop(null);setSwapAnim(null);setFallAnims(null);
     setSpTip(null);setMileHit(null);setMilesR([]);
     seenSp.current.clear();parts.length=0;lm.current=Date.now();
-    setSearching(false);setMode('online');modeR.current='online';
+    setMyGameId(null);setMode('online');modeR.current='online';
     setScr("game");startMusic();
   });
   socket.on('scores_update',({scores:ss})=>{
@@ -266,7 +269,7 @@ const startLocal=(m,npc,f)=>{
   setScr("game");startMusic();
 };
 
-const goMenu=()=>{setScr("menu");setWin(null);wR.current=null;setSearching(false);stopMusic();socketRef.current?.emit('leave_game');socketRef.current?.emit('cancel_match')};
+const goMenu=()=>{setScr("menu");setWin(null);wR.current=null;setMyGameId(null);stopMusic();socketRef.current?.emit('leave_game')};
 const fmt=s=>`${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 
 // ===== SCREENS =====
@@ -284,7 +287,7 @@ if(scr==="menu")return(<div style={WRAP}>
 <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
 <button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,width:"100%",fontSize:18}}>🧘 Соло — тренировка</button>
 <button onClick={()=>setScr('botSetup')} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #7C83FF50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#7C83FF,#5C6BC0)",color:"#fff",boxShadow:"0 5px 0 #3949AB,0 0 30px rgba(124,131,255,0.3)"}}>🤖 Против ботов</button>
-<button onClick={()=>{socketRef.current?.emit('find_match',{name:name||'Гость'});setScr('searching')}} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #FF6B6B50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#FF6B6B,#E53935)",color:"#fff",boxShadow:"0 5px 0 #C62828,0 0 30px rgba(255,107,107,0.3)"}}>🌐 Онлайн — найти соперника</button>
+<button onClick={()=>setScr('online')} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #FF6B6B50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#FF6B6B,#E53935)",color:"#fff",boxShadow:"0 5px 0 #C62828,0 0 30px rgba(255,107,107,0.3)"}}>🌐 Онлайн</button>
 </div>
 <div style={{marginTop:16,display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%"}}>
 <div style={{fontSize:11,color:"#475569",fontWeight:600}}>Match-3 гонка — первый до 1000!</div>
@@ -306,16 +309,32 @@ return(<div style={WRAP}>
 <button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:6}}>← Назад</button>
 </div></div>)}
 
-// Searching for opponent
-if(scr==="searching")return(<div style={{...WRAP,justifyContent:"center"}}>
-<div style={{background:CARD,borderRadius:28,padding:"40px 24px",width:"100%",boxShadow:"0 0 40px rgba(255,107,107,0.15)",border:"2px solid #FF6B6B40",textAlign:"center"}}>
-<div style={{fontSize:64,animation:"bob 2s ease-in-out infinite"}}>🔍</div>
-<h2 style={{fontSize:24,fontWeight:900,color:"#fff",margin:"16px 0 8px"}}>Ищем соперника...</h2>
-<div style={{fontSize:14,color:"#94a3b8",fontWeight:600}}>Как только кто-то зайдёт — игра начнётся</div>
-{onlineCount>1&&<div style={{marginTop:8,fontSize:13,color:"#66BB6A",fontWeight:700}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#66BB6A",marginRight:4,animation:"pulse 2s infinite"}}></span>{onlineCount} онлайн</div>}
-<div style={{display:"flex",justifyContent:"center",gap:8,margin:"20px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:12,height:12,borderRadius:6,background:"#FF6B6B",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
-<button onClick={goMenu} style={{...BTN_SEC,padding:"10px 28px"}}>Отмена</button>
-</div></div>);
+// Online — one screen: create + list
+if(scr==="online")return(<div style={WRAP}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",marginBottom:12}}>
+<h2 style={{fontSize:22,fontWeight:900,color:"#fff",margin:0}}>🌐 Онлайн</h2>
+{onlineCount>0&&<div style={{fontSize:12,color:"#66BB6A",fontWeight:800}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#66BB6A",marginRight:4,animation:"pulse 2s infinite"}}></span>{onlineCount} онлайн</div>}
+</div>
+{myGameId?
+<div style={{width:"100%",background:CARD,borderRadius:20,padding:"20px 16px",marginBottom:12,border:"2px solid #FF6B6B40",textAlign:"center"}}>
+<div style={{fontSize:40,animation:"bob 2s ease-in-out infinite"}}>⏳</div>
+<div style={{fontSize:16,fontWeight:900,color:"#fff",margin:"8px 0"}}>Ждём соперника...</div>
+<div style={{fontSize:13,color:"#94a3b8",fontWeight:600,marginBottom:12}}>Когда кто-то присоединится — игра начнётся</div>
+<div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:12}}>{[0,1,2].map(i=><div key={i} style={{width:10,height:10,borderRadius:5,background:"#FF6B6B",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
+<button onClick={()=>{socketRef.current?.emit('leave_game');setMyGameId(null)}} style={{...BTN_SEC,padding:"8px 24px",fontSize:13}}>Отменить</button>
+</div>
+:<button onClick={()=>socketRef.current?.emit('create_game',{name:name||'Гость'})} style={{...BTN_GOLD,width:"100%",marginBottom:12,fontSize:16}}>➕ Создать игру</button>}
+<div style={{width:"100%",flex:1}}>
+<div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Открытые игры</div>
+{gamesList.length===0?<div style={{background:CARD,borderRadius:16,padding:"24px 16px",textAlign:"center",border:"1px solid #334155"}}><div style={{fontSize:36,marginBottom:8}}>🏜️</div><div style={{fontSize:14,color:"#64748b",fontWeight:700}}>Пока нет игр</div><div style={{fontSize:12,color:"#475569",marginTop:4}}>Создай первую!</div></div>
+:gamesList.map(g=><div key={g.id} onClick={()=>{if(!myGameId)socketRef.current?.emit('join_game',{gameId:g.id,name:name||'Гость'})}} style={{background:CARD,borderRadius:16,padding:"14px 16px",marginBottom:8,border:"1px solid #334155",cursor:myGameId?"default":"pointer",opacity:myGameId?.5:1,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div><div style={{fontSize:15,fontWeight:800,color:"#fff"}}>{g.players[0]||'Гость'}</div>
+<div style={{fontSize:11,color:"#64748b",fontWeight:600}}>ждёт соперника</div></div>
+<div style={{padding:"6px 16px",borderRadius:12,background:"linear-gradient(180deg,#66BB6A,#43A047)",color:"#fff",fontWeight:800,fontSize:13}}>Играть</div>
+</div>)}
+</div>
+<button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:8}}>← Меню</button>
+</div>);
 
 // ===== GAME SCREEN =====
 const pct0=Math.min(100,scores[0]/TARGET*100);
@@ -369,7 +388,7 @@ return(<div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection
 <button onClick={goMenu} style={{...BTN_SEC,flex:1}}>Меню</button>
 {mode==='solo'&&<button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,flex:2,fontSize:16}}>🔄 Ещё раз</button>}
 {mode==='bot'&&<button onClick={()=>startLocal('bot',pc,fee)} style={{...BTN_GOLD,flex:2,fontSize:16}}>⚡ Реванш</button>}
-{mode==='online'&&<button onClick={()=>{setWin(null);wR.current=null;socketRef.current?.emit('find_match',{name:name||'Гость'});setScr('searching')}} style={{...BTN_GOLD,flex:2,fontSize:16}}>🔄 Ещё раз</button>}
+{mode==='online'&&<button onClick={()=>{setWin(null);wR.current=null;setScr('online')}} style={{...BTN_GOLD,flex:2,fontSize:16}}>🔄 Ещё раз</button>}
 </div></div></div>)}
 <style>{`@keyframes bIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}@keyframes fIn{from{opacity:0}to{opacity:1}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-70px) scale(1.3)}}@keyframes cF{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}@keyframes cmIn{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.2) rotate(3deg)}100%{transform:scale(1) rotate(0);opacity:1}}@keyframes vP{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@keyframes pI{0%{transform:scale(0) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}@keyframes sS{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes pulseBtn{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}button:active{filter:brightness(.9)!important}`}</style>
 </div>)}

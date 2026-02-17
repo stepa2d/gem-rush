@@ -13,35 +13,37 @@ app.use(express.static(join(__dirname, '../dist')));
 app.get('/{*path}', (req, res) => res.sendFile(join(__dirname, '../dist/index.html')));
 
 const games = new Map();
-const queue = []; // waiting players [{id, name}]
 let onlineCount = 0;
+const genId = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 
-function startGame(players) {
-  const id = Math.random().toString(36).slice(2, 8).toUpperCase();
-  const g = {
-    id, status: 'playing',
-    players: players.map((p, i) => ({ id: p.id, index: i, name: p.name })),
-    scores: players.map(() => 0),
-    seed: Math.floor(Math.random() * 2147483647),
-    timer: null, startTime: Date.now()
-  };
-  games.set(id, g);
+const pubGame = g => ({
+  id: g.id, players: g.players.map(p => p.name),
+  maxPlayers: g.maxPlayers, status: g.status
+});
+
+function broadcastList() {
+  const list = [...games.values()].filter(g => g.status === 'waiting').map(pubGame);
+  io.emit('games_list', list);
+}
+
+function startGame(id) {
+  const g = games.get(id);
+  if (!g) return;
+  g.status = 'playing';
+  g.seed = Math.floor(Math.random() * 2147483647);
+  g.scores = g.players.map(() => 0);
   g.players.forEach((p, i) => {
     const s = io.sockets.sockets.get(p.id);
-    if (s) {
-      s.data.gameId = id;
-      s.data.playerIndex = i;
-      s.join(id);
-      s.emit('game_start', {
-        gameId: id, seed: g.seed, playerIndex: i,
-        playerCount: g.players.length,
-        players: g.players.map(pl => ({ name: pl.name, index: pl.index }))
-      });
-    }
+    if (s) s.emit('game_start', {
+      gameId: g.id, seed: g.seed, playerIndex: i,
+      playerCount: g.players.length,
+      players: g.players.map(pl => ({ name: pl.name, index: pl.index }))
+    });
   });
   g.timer = setTimeout(() => {
     if (games.has(id) && g.status === 'playing') endGame(id, 'time');
   }, 76000);
+  broadcastList();
 }
 
 function endGame(id, reason) {
@@ -59,43 +61,76 @@ function endGame(id, reason) {
       s.data.gameId = null;
     }
   });
-  setTimeout(() => games.delete(id), 10000);
+  setTimeout(() => games.delete(id), 5000);
+  broadcastList();
 }
 
-function removeFromQueue(socketId) {
-  const idx = queue.findIndex(p => p.id === socketId);
-  if (idx !== -1) queue.splice(idx, 1);
-}
-
-function tryMatch() {
-  while (queue.length >= 2) {
-    const p1 = queue.shift();
-    const p2 = queue.shift();
-    // Verify both still connected
-    const s1 = io.sockets.sockets.get(p1.id);
-    const s2 = io.sockets.sockets.get(p2.id);
-    if (!s1 && !s2) continue;
-    if (!s1) { queue.unshift(p2); continue; }
-    if (!s2) { queue.unshift(p1); continue; }
-    startGame([p1, p2]);
+// Cleanup stale games every 60s
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, g] of games) {
+    if (g.status === 'waiting' && now - g.createdAt > 300000) {
+      g.players.forEach(p => {
+        const s = io.sockets.sockets.get(p.id);
+        if (s) { s.emit('game_expired'); s.data.gameId = null; }
+      });
+      games.delete(id);
+    }
   }
-}
+  broadcastList();
+}, 60000);
 
 io.on('connection', (socket) => {
   onlineCount++;
   io.emit('online_count', onlineCount);
   socket.emit('online_count', onlineCount);
+  socket.emit('games_list', [...games.values()].filter(g => g.status === 'waiting').map(pubGame));
 
-  socket.on('find_match', ({ name }) => {
-    if (queue.find(p => p.id === socket.id)) return;
+  socket.on('create_game', ({ name }) => {
+    // Don't create if already in a game
     if (socket.data.gameId) return;
-    queue.push({ id: socket.id, name: (name || 'Гость').slice(0, 16) });
-    socket.emit('searching');
-    tryMatch();
+    const id = genId();
+    const g = {
+      id, maxPlayers: 2, status: 'waiting',
+      players: [{ id: socket.id, index: 0, name: (name || 'Гость').slice(0, 16) }],
+      scores: [], seed: null, timer: null, createdAt: Date.now()
+    };
+    games.set(id, g);
+    socket.data.gameId = id;
+    socket.data.playerIndex = 0;
+    socket.join(id);
+    socket.emit('game_created', { gameId: id });
+    broadcastList();
   });
 
-  socket.on('cancel_match', () => {
-    removeFromQueue(socket.id);
+  socket.on('join_game', ({ gameId, name }) => {
+    if (socket.data.gameId) return;
+    const g = games.get(gameId);
+    if (!g || g.status !== 'waiting') return;
+    if (g.players.length >= g.maxPlayers) return;
+    if (g.players.find(p => p.id === socket.id)) return;
+    const pi = g.players.length;
+    g.players.push({ id: socket.id, index: pi, name: (name || 'Гость').slice(0, 16) });
+    socket.data.gameId = gameId;
+    socket.data.playerIndex = pi;
+    socket.join(gameId);
+    if (g.players.length >= g.maxPlayers) startGame(gameId);
+    broadcastList();
+  });
+
+  socket.on('leave_game', () => {
+    const gid = socket.data.gameId;
+    if (!gid || !games.has(gid)) return;
+    const g = games.get(gid);
+    if (g.status === 'waiting') {
+      g.players = g.players.filter(p => p.id !== socket.id);
+      socket.leave(gid); socket.data.gameId = null;
+      if (g.players.length === 0) games.delete(gid);
+      broadcastList();
+    } else if (g.status === 'playing') {
+      io.to(gid).emit('player_disconnected', { playerIndex: socket.data.playerIndex });
+      endGame(gid, 'disconnect');
+    }
   });
 
   socket.on('emote', ({ emoji }) => {
@@ -114,25 +149,17 @@ io.on('connection', (socket) => {
     if (score >= 1000) endGame(gid, 'target');
   });
 
-  socket.on('leave_game', () => {
-    removeFromQueue(socket.id);
-    const gid = socket.data.gameId;
-    if (!gid || !games.has(gid)) return;
-    const g = games.get(gid);
-    if (g.status === 'playing') {
-      io.to(gid).emit('player_disconnected', { playerIndex: socket.data.playerIndex });
-      endGame(gid, 'disconnect');
-    }
-  });
-
   socket.on('disconnect', () => {
     onlineCount = Math.max(0, onlineCount - 1);
     io.emit('online_count', onlineCount);
-    removeFromQueue(socket.id);
     const gid = socket.data.gameId;
     if (!gid || !games.has(gid)) return;
     const g = games.get(gid);
-    if (g.status === 'playing') {
+    if (g.status === 'waiting') {
+      g.players = g.players.filter(p => p.id !== socket.id);
+      if (g.players.length === 0) games.delete(gid);
+      broadcastList();
+    } else if (g.status === 'playing') {
       io.to(gid).emit('player_disconnected', { playerIndex: socket.data.playerIndex });
       endGame(gid, 'disconnect');
     }
