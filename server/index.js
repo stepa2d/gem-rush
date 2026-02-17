@@ -139,6 +139,18 @@ io.on('connection', (socket) => {
     io.to(gid).emit('emote', { playerIndex: pi, emoji: String(emoji).slice(0, 4) });
   });
 
+  socket.on('swap', ({ r1, c1, r2, c2 }) => {
+    const gid = socket.data.gameId, pi = socket.data.playerIndex;
+    if (!gid || pi === undefined) return;
+    socket.to(gid).emit('remote_swap', { r1, c1, r2, c2, playerIndex: pi });
+  });
+
+  socket.on('cursor_move', ({ r, c }) => {
+    const gid = socket.data.gameId, pi = socket.data.playerIndex;
+    if (!gid || pi === undefined) return;
+    socket.to(gid).emit('remote_cursor', { r, c, playerIndex: pi });
+  });
+
   socket.on('score_update', ({ score }) => {
     const gid = socket.data.gameId, pi = socket.data.playerIndex;
     if (!gid || pi === undefined || !games.has(gid)) return;

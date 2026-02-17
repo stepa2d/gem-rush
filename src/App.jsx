@@ -51,11 +51,11 @@ const fM=g=>{const m=new Set(),sp=[];for(let r=0;r<GS;r++){let c=0;while(c<GS){i
 const swapValid=(g,r1,c1,r2,c2)=>{if(isSp(g[r1][c1])||isSp(g[r2][c2]))return true;const t=g.map(x=>[...x]);[t[r1][c1],t[r2][c2]]=[t[r2][c2],t[r1][c1]];return fM(t).m.size>0};
 const hasM=(g,lk)=>{for(let r=0;r<GS;r++)for(let c=0;c<GS;c++){if(lk.has(`${r},${c}`)||g[r][c]===null)continue;if(c+1<GS&&!lk.has(`${r},${c+1}`)&&g[r][c+1]!==null&&swapValid(g,r,c,r,c+1))return true;if(r+1<GS&&!lk.has(`${r+1},${c}`)&&g[r+1]?.[c]!==null&&swapValid(g,r,c,r+1,c))return true}return false};
 const fH=(g,l)=>{for(let r=0;r<GS;r++)for(let c=0;c<GS;c++){if(l.has(`${r},${c}`)||g[r][c]===null)continue;if(c+1<GS&&!l.has(`${r},${c+1}`)&&g[r][c+1]!==null&&swapValid(g,r,c,r,c+1))return[`${r},${c}`,`${r},${c+1}`];if(r+1<GS&&!l.has(`${r+1},${c}`)&&g[r+1]?.[c]!==null&&swapValid(g,r,c,r+1,c))return[`${r},${c}`,`${r+1},${c}`]}return null};
-const gvAnim=g=>{const n=g.map(r=>[...r]);const anims=[];for(let c=0;c<GS;c++){let w=GS-1;for(let r=GS-1;r>=0;r--)if(n[r][c]!==null){if(r!==w){n[w][c]=n[r][c];anims.push({c,toR:w,fromR:r});n[r][c]=null}w--}for(let r=w;r>=0;r--){n[r][c]=Math.floor(Math.random()*FC);anims.push({c,toR:r,fromR:r-w-2})}}return{grid:n,anims}};
+const gvAnim=(g,rng=Math.random)=>{const n=g.map(r=>[...r]);const anims=[];for(let c=0;c<GS;c++){let w=GS-1;for(let r=GS-1;r>=0;r--)if(n[r][c]!==null){if(r!==w){n[w][c]=n[r][c];anims.push({c,toR:w,fromR:r});n[r][c]=null}w--}for(let r=w;r>=0;r--){n[r][c]=Math.floor(rng()*FC);anims.push({c,toR:r,fromR:r-w-2})}}return{grid:n,anims}};
 const adj=(a,b)=>a&&b&&((Math.abs(a.r-b.r)===1&&a.c===b.c)||(a.r===b.r&&Math.abs(a.c-b.c)===1));
 class Pt{constructor(x,y,col){this.x=x;this.y=y;this.vx=(Math.random()-.5)*7;this.vy=(Math.random()-.5)*7-3;this.life=1;this.dc=.015+Math.random()*.025;this.sz=2+Math.random()*5;this.col=col}update(){this.x+=this.vx;this.y+=this.vy;this.vy+=.12;this.life-=this.dc}draw(c){c.globalAlpha=this.life;c.fillStyle=this.col;c.beginPath();c.arc(this.x,this.y,this.sz*this.life,0,Math.PI*2);c.fill();c.globalAlpha=1}}
 // Canvas Board
-const CB=({grid,sel,locked,flash,hint,cursors,parts,onCell,swapAnim,fallAnims})=>{
+const CB=({grid,sel,locked,flash,hint,cursors,parts,onCell,swapAnim,fallAnims,players})=>{
 const ref=useRef(null),aR=useRef(null),pR=useRef(parts||[]);pR.current=parts||[];const ht=useRef(0);
 useEffect(()=>{const cv=ref.current;if(!cv)return;const ctx=cv.getContext("2d");const dp=window.devicePixelRatio||1;cv.width=BPX*dp;cv.height=BPX*dp;ctx.scale(dp,dp);
 const draw=()=>{ctx.clearRect(0,0,BPX,BPX);const bg=ctx.createLinearGradient(0,0,0,BPX);bg.addColorStop(0,"#5D4037");bg.addColorStop(1,"#3E2723");ctx.fillStyle=bg;ctx.beginPath();ctx.roundRect(0,0,BPX,BPX,16);ctx.fill();ctx.strokeStyle="rgba(141,110,99,0.15)";ctx.lineWidth=1;for(let i=0;i<8;i++){ctx.beginPath();ctx.moveTo(0,i*BPX/8+5);ctx.lineTo(BPX,i*BPX/8+10);ctx.stroke()}ctx.strokeStyle="#6D4C41";ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(1,1,BPX-2,BPX-2,16);ctx.stroke();
@@ -71,7 +71,7 @@ if(iF){ctx.globalAlpha=.3;ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(dx,dy,CEL
 ctx.save();if(iH&&!iS){ctx.translate(dx,dy);ctx.scale(hs,hs);ctx.translate(-dx,-dy)}if(iS){ctx.translate(dx,dy);ctx.scale(1.15,1.15);ctx.translate(-dx,-dy)}ctx.globalAlpha=iL?.35:1;
 if(isSp(fi))drawSpecial(ctx,fi,dx,dy,sz,t);else drawFruit(ctx,fi,dx,dy,sz);
 ctx.globalAlpha=1;if(iS){ctx.strokeStyle="#FFD54F";ctx.lineWidth=3;ctx.shadowColor="#FFD54F";ctx.shadowBlur=16;ctx.beginPath();ctx.roundRect(x+1,y+1,CELL-2,CELL-2,10);ctx.stroke();ctx.shadowBlur=0}if(iH&&!iS){ctx.strokeStyle="rgba(255,255,255,0.6)";ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.beginPath();ctx.roundRect(x+2,y+2,CELL-4,CELL-4,8);ctx.stroke();ctx.setLineDash([])}ctx.restore()}
-if(cursors)Object.entries(cursors).forEach(([id,pos])=>{const bi=parseInt(id);if(bi<=0)return;const p=BOTS[bi-1];if(!p)return;const bx=PAD+pos.c*CELL+CELL-5,by=PAD+pos.r*CELL+3;ctx.fillStyle=p.c;ctx.globalAlpha=.8;ctx.beginPath();ctx.arc(bx,by,9,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(bx,by,7,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.font="10px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(p.a,bx,by+1)});
+if(cursors)Object.entries(cursors).forEach(([id,pos])=>{const bi=parseInt(id);if(bi<=0)return;const p=(players&&players[bi])||BOTS[bi-1];if(!p)return;const bx=PAD+pos.c*CELL+CELL-5,by=PAD+pos.r*CELL+3;ctx.fillStyle=p.c;ctx.globalAlpha=.8;ctx.beginPath();ctx.arc(bx,by,9,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(bx,by,7,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.font="10px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(p.a,bx,by+1)});
 const ps=pR.current;for(let i=ps.length-1;i>=0;i--){ps[i].update();if(ps[i].life<=0)ps.splice(i,1);else ps[i].draw(ctx)}
 aR.current=requestAnimationFrame(draw)};draw();return()=>{if(aR.current)cancelAnimationFrame(aR.current)}},[grid,sel,locked,flash,hint,cursors,swapAnim,fallAnims]);
 const hc=e=>{const rc=ref.current.getBoundingClientRect();const x=(e.clientX-rc.left)*(BPX/rc.width),y=(e.clientY-rc.top)*(BPX/rc.height);const c=Math.floor((x-PAD)/CELL),r=Math.floor((y-PAD)/CELL);if(r>=0&&r<GS&&c>=0&&c<GS)onCell(r,c)};
@@ -106,12 +106,12 @@ const[name,setName]=useState(()=>localStorage.getItem('gr_name')||'');
 const[soundOn,setSoundOn]=useState(()=>localStorage.getItem('gr_sound')!=='off');
 const[onlineCount,setOnlineCount]=useState(0);
 const[emoteShow,setEmoteShow]=useState(null);
-const[copied,setCopied]=useState(false);
+const[copied,setCopied]=useState(false);const[remoteName,setRemoteName]=useState('');
 const gR=useRef(grid),lR=useRef(locked),wR=useRef(win),scR=useRef(scores),modeR=useRef(mode),pcR=useRef(pc);
 gR.current=grid;lR.current=locked;wR.current=win;scR.current=scores;modeR.current=mode;pcR.current=pc;
 const mutedRef=useRef(!soundOn);mutedRef.current=!soundOn;
 const lm=useRef(Date.now());const seenSp=useRef(new Set());const{sfx,startMusic,stopMusic}=useAudio(mutedRef);
-const socketRef=useRef(null);const myPI=useRef(0);
+const socketRef=useRef(null);const myPI=useRef(0);const gameRng=useRef(Math.random);const doSwapRef=useRef(null);
 const nameRef=useRef(name);nameRef.current=name;
 const saveName=n=>{setName(n);nameRef.current=n;localStorage.setItem('gr_name',n)};
 const toggleSound=()=>{const nv=!soundOn;setSoundOn(nv);mutedRef.current=!nv;localStorage.setItem('gr_sound',nv?'on':'off');if(!nv)stopMusic()};
@@ -121,15 +121,15 @@ const myPlayer=useMemo(()=>({...ME,n:name||'Ты'}),[name]);
 const PL=useMemo(()=>{
   if(mode==='solo')return[myPlayer];
   if(mode==='bot')return[myPlayer,...BOTS.slice(0,pc-1)];
-  if(mode==='online')return[myPlayer,...Array.from({length:pc-1},(_,i)=>({n:`Игрок ${i+2}`,a:"🎭",c:OP_COLS[i%3],r:OP_COLS[i%3]}))];
+  if(mode==='online')return[myPlayer,{n:remoteName||'Игрок 2',a:"🎭",c:OP_COLS[0],r:OP_COLS[0]}];
   return[myPlayer];
-},[mode,pc,myPlayer]);
+},[mode,pc,myPlayer,remoteName]);
 
 const spw=(r,c,col,n=8)=>{const cx=PAD+c*CELL+CELL/2,cy=PAD+r*CELL+CELL/2;for(let i=0;i<n;i++)parts.push(new Pt(cx,cy,col))};
 const showSpTip=ty=>{if(seenSp.current.has(ty))return;seenSp.current.add(ty);const tips={[SP_BOMB]:"💣 Свапни бомбу — взрыв 3×3!",[SP_LIGHT]:"⚡ Свапни молнию — удар крестом!",[SP_RAIN]:"🌈 Свапни радугу — убирает цвет!"};setSpTip(tips[ty]);setTimeout(()=>setSpTip(null),2200)};
 const checkMiles=sc=>{MILES.forEach(m=>{if(sc>=m&&!milesR.includes(m)){setMilesR(p=>[...p,m]);setMileHit(m);sfx("milestone");setTimeout(()=>setMileHit(null),1500)}})};
-const triggerFall=(g)=>{const{grid:ng,anims}=gvAnim(g);const now=Date.now();const fa=anims.map(a=>({...a,start:now,dur:250+Math.abs(a.toR-a.fromR)*40}));setFallAnims(fa);setGrid(ng);gR.current=ng;setTimeout(()=>setFallAnims(null),500);return ng};
-const chkR=useCallback(g=>{if(hasM(g,lR.current))return g;sfx("shuffle");setShMsg(true);setTimeout(()=>setShMsg(false),1600);let ng,tr=0;do{ng=mkG();tr++}while(!hasM(ng,new Set())&&tr<50);setTimeout(()=>{setGrid(ng);gR.current=ng},400);return ng},[sfx]);
+const triggerFall=(g)=>{const{grid:ng,anims}=gvAnim(g,gameRng.current);const now=Date.now();const fa=anims.map(a=>({...a,start:now,dur:250+Math.abs(a.toR-a.fromR)*40}));setFallAnims(fa);setGrid(ng);gR.current=ng;setTimeout(()=>setFallAnims(null),500);return ng};
+const chkR=useCallback(g=>{if(hasM(g,lR.current))return g;sfx("shuffle");setShMsg(true);setTimeout(()=>setShMsg(false),1600);let ng,tr=0;do{const sd=Math.floor(gameRng.current()*2147483647);ng=mkG(sd);tr++}while(!hasM(ng,new Set())&&tr<50);setTimeout(()=>{setGrid(ng);gR.current=ng},400);return ng},[sfx]);
 
 // Socket
 useEffect(()=>{
@@ -140,9 +140,12 @@ useEffect(()=>{
   socket.on('game_created',({gameId})=>setMyGameId(gameId));
   socket.on('game_expired',()=>{setMyGameId(null);setScr('online')});
   socket.on('emote',({playerIndex,emoji})=>{setEmoteShow({pi:playerIndex,emoji,t:Date.now()});setTimeout(()=>setEmoteShow(null),1800)});
-  socket.on('game_start',({seed,playerIndex,playerCount})=>{
+  socket.on('game_start',({seed,playerIndex,playerCount,players})=>{
     myPI.current=playerIndex;
+    const rp=players?.find(p=>p.index!==playerIndex);
+    setRemoteName(rp?.name||'Игрок 2');
     const npc=playerCount;setPc(npc);pcR.current=npc;
+    gameRng.current=mulberry32(seed*7+13);
     const g=mkG(seed);setGrid(g);gR.current=g;
     setScores(Array(npc).fill(0));scR.current=Array(npc).fill(0);
     setTl(TIME_S);setSel(null);setWin(null);wR.current=null;
@@ -171,6 +174,8 @@ useEffect(()=>{
   socket.on('player_disconnected',()=>{
     if(!wR.current&&modeR.current==='online'){setWin("you");wR.current="you";sfx("win");setStreak(sk=>sk+1);stopMusic()}
   });
+  socket.on('remote_swap',({r1,c1,r2,c2})=>{const k1=`${r1},${c1}`,k2=`${r2},${c2}`;const trySwap=(a)=>{if(a>10||wR.current)return;if(lR.current.has(k1)||lR.current.has(k2)){setTimeout(()=>trySwap(a+1),200);return}setCursors(cv=>({...cv,1:{r:r1,c:c1}}));setTimeout(()=>{if(doSwapRef.current)doSwapRef.current(r1,c1,r2,c2,1);setCursors(cv=>({...cv,1:{r:r2,c:c2}}))},150)};trySwap(0)});
+  socket.on('remote_cursor',({r,c})=>{if(modeR.current==='online')setCursors(cv=>({...cv,1:{r,c}}))});
   return()=>socket.disconnect();
 },[startMusic,stopMusic,sfx]);
 
@@ -188,7 +193,7 @@ useEffect(()=>{if(scr!=="game"||win||mode==='solo')return;const t=setInterval(()
 const activateSpecial=useCallback((ng,nl,fi,r,c)=>{sfx("bomb");
 if(fi===SP_BOMB){for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<GS&&nc>=0&&nc<GS&&ng[nr][nc]!==null){spw(nr,nc,"#FF9800",14);ng[nr][nc]=null;nl.add(`${nr},${nc}`)}}}
 else if(fi===SP_LIGHT){for(let rr=0;rr<GS;rr++){if(ng[rr][c]!==null){spw(rr,c,"#FFD54F",12);ng[rr][c]=null;nl.add(`${rr},${c}`)}}for(let cc=0;cc<GS;cc++){if(ng[r][cc]!==null){spw(r,cc,"#FFD54F",12);ng[r][cc]=null;nl.add(`${r},${cc}`)}}}
-else if(fi===SP_RAIN){const tc=Math.floor(Math.random()*FC);for(let rr=0;rr<GS;rr++)for(let cc=0;cc<GS;cc++){if(isNorm(ng[rr][cc])&&ng[rr][cc]===tc){spw(rr,cc,"#E040FB",10);ng[rr][cc]=null;nl.add(`${rr},${cc}`)}}}
+else if(fi===SP_RAIN){const tc=Math.floor(gameRng.current()*FC);for(let rr=0;rr<GS;rr++)for(let cc=0;cc<GS;cc++){if(isNorm(ng[rr][cc])&&ng[rr][cc]===tc){spw(rr,cc,"#E040FB",10);ng[rr][cc]=null;nl.add(`${rr},${cc}`)}}}
 },[sfx]);
 
 const chain=useCallback((g,pi,depth,ls)=>{
@@ -219,6 +224,7 @@ if(lR.current.has(k1)||lR.current.has(k2))return false;
 const g=gR.current,v1=g[r1][c1],v2=g[r2][c2];const hasSp=isSp(v1)||isSp(v2);
 const ng=g.map(r=>[...r]);[ng[r1][c1],ng[r2][c2]]=[ng[r2][c2],ng[r1][c1]];
 if(!hasSp&&fM(ng).m.size===0){if(pi===0)sfx("fail");return false}
+if(pi===0&&modeR.current==='online')socketRef.current?.emit('swap',{r1,c1,r2,c2});
 const ls=new Set([k1,k2]);setLocked(p=>new Set([...p,k1,k2]));lR.current=new Set([...lR.current,k1,k2]);
 setSwapAnim({r1,c1,r2,c2,start:Date.now()});
 setTimeout(()=>{setSwapAnim(null);setGrid(ng);gR.current=ng;clrH();
@@ -233,6 +239,7 @@ setLog(l=>[{p:(plList[pi]||ME).n,c:(plList[pi]||ME).c,pts:spPts,d:0,s:true},...l
 const fg=triggerFall(ag);setTimeout(()=>chain(fg,pi,0,al),350)},150)}
 else{setTimeout(()=>chain(ng,pi,0,ls),80)}
 },160);return true},[chain,sfx,activateSpecial,reportScore]);
+doSwapRef.current=doSwap;
 
 // Bot AI
 useEffect(()=>{if(scr!=="game"||win||mode!=='bot')return;
@@ -251,10 +258,11 @@ setTimeout(()=>{doSwap(pick.r1,pick.c1,pick.r2,pick.c2,bi);setCursors(cv=>({...c
 useEffect(()=>{if(scr!=="game"||win||mode!=='bot')return;
 const iv=setInterval(()=>{setCursors(cv=>{const n={...cv};for(let i=1;i<pcR.current;i++){if(Math.random()>.45)continue;const cur=n[i]||{r:Math.floor(Math.random()*GS),c:Math.floor(Math.random()*GS)};n[i]={r:Math.max(0,Math.min(GS-1,cur.r+Math.floor(Math.random()*3)-1)),c:Math.max(0,Math.min(GS-1,cur.c+Math.floor(Math.random()*3)-1))}}return n})},400);return()=>clearInterval(iv)},[scr,win,mode]);
 
-const click=(r,c)=>{if(win||shMsg)return;if(lR.current.has(`${r},${c}`))return;if(gR.current[r][c]===null)return;if(!sel){setSel({r,c});sfx("select",gR.current[r][c]%FC);clrH();return}if(sel.r===r&&sel.c===c){setSel(null);return}if(!adj(sel,{r,c})){setSel({r,c});sfx("select",gR.current[r][c]%FC);return}doSwap(sel.r,sel.c,r,c,0);setSel(null)};
+const click=(r,c)=>{if(win||shMsg)return;if(lR.current.has(`${r},${c}`))return;if(gR.current[r][c]===null)return;if(modeR.current==='online')socketRef.current?.emit('cursor_move',{r,c});if(!sel){setSel({r,c});sfx("select",gR.current[r][c]%FC);clrH();return}if(sel.r===r&&sel.c===c){setSel(null);return}if(!adj(sel,{r,c})){setSel({r,c});sfx("select",gR.current[r][c]%FC);return}doSwap(sel.r,sel.c,r,c,0);setSel(null)};
 
 const startLocal=(m,npc,f)=>{
   setMode(m);modeR.current=m;setPc(npc);pcR.current=npc;setFee(f);
+  gameRng.current=mulberry32(Math.floor(Math.random()*2147483647));
   const g=mkG();setGrid(g);gR.current=g;
   setScores(Array(npc).fill(0));scR.current=Array(npc).fill(0);
   setTl(TIME_S);setSel(null);setWin(null);wR.current=null;
@@ -375,7 +383,7 @@ return(<div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection
 <div style={{fontSize:11,fontWeight:900,color:p.c,fontFamily:"monospace"}}>{p.sc}</div></div>)})}</div>}
 {comboShow&&<div style={{textAlign:"center",padding:"1px 0",zIndex:2,animation:"cmIn .3s"}}><span style={{display:"inline-block",padding:"3px 16px",borderRadius:16,background:"linear-gradient(180deg,#FF6D00,#E65100)",color:"#fff",fontSize:16,fontWeight:900,border:"2px solid #FFB74D"}}>🔥 КОМБО x{comboShow}!</span></div>}
 {scorePop&&<div style={{position:"absolute",top:"35%",left:`${scorePop.x}%`,zIndex:100,fontSize:24,fontWeight:900,color:"#FFD54F",textShadow:"0 0 12px rgba(255,213,79,0.5)",animation:"fUp .9s ease-out forwards",pointerEvents:"none"}}>+{scorePop.pts}</div>}
-<div style={{padding:"2px 8px",flex:1,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}><CB grid={grid} sel={sel} locked={locked} flash={flash} hint={hint} cursors={mode==='bot'?cursors:null} parts={parts} onCell={click} swapAnim={swapAnim} fallAnims={fallAnims}/></div>
+<div style={{padding:"2px 8px",flex:1,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}><CB grid={grid} sel={sel} locked={locked} flash={flash} hint={hint} cursors={mode==='bot'||mode==='online'?cursors:null} parts={parts} onCell={click} swapAnim={swapAnim} fallAnims={fallAnims} players={PL}/></div>
 {emoteShow&&<div style={{position:"absolute",top:"25%",left:"50%",transform:"translateX(-50%)",zIndex:200,fontSize:48,animation:"bIn .3s",pointerEvents:"none"}}>{emoteShow.emoji}</div>}
 {mode==='online'&&!win&&<div style={{display:"flex",justifyContent:"center",gap:6,padding:"2px 10px",zIndex:1}}>{['👏','🔥','😤','💪','😎','🎯'].map(e=><button key={e} onClick={()=>socketRef.current?.emit('emote',{emoji:e})} style={{background:"rgba(255,255,255,0.06)",border:"1px solid #33415520",borderRadius:10,padding:"2px 8px",cursor:"pointer",fontSize:16}}>{e}</button>)}</div>}
 <div style={{padding:"4px 10px 8px",display:"flex",gap:3,overflowX:"auto",background:"rgba(255,255,255,.03)",borderTop:"1px solid rgba(255,255,255,.05)",zIndex:1}}>{log.slice(0,4).map((m,i)=>(<div key={i} style={{flexShrink:0,padding:"3px 8px",borderRadius:10,background:"rgba(255,255,255,.05)",border:`1px solid ${m.c}25`,fontSize:10,fontWeight:700,opacity:1-i*.2,whiteSpace:"nowrap"}}><span style={{color:m.c}}>{m.p}</span> <span style={{color:"#66BB6A"}}>+{m.pts}</span>{m.d>0&&<span style={{color:"#FF5252"}}> 🔥x{m.d+1}</span>}{m.s&&" ✨"}</div>))}{log.length===0&&<div style={{fontSize:11,color:"#64748b",fontWeight:700,padding:3}}>👆 Тапни фрукт!</div>}</div>
