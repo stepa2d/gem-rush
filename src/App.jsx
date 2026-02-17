@@ -102,8 +102,7 @@ const[streak,setStreak]=useState(0);const[scorePop,setScorePop]=useState(null);
 const[swapAnim,setSwapAnim]=useState(null);const[fallAnims,setFallAnims]=useState(null);
 const[spTip,setSpTip]=useState(null);const[mileHit,setMileHit]=useState(null);const[milesR,setMilesR]=useState([]);
 // Online state
-const[gamesList,setGamesList]=useState([]);const[waitInfo,setWaitInfo]=useState(null);
-const[createFee,setCreateFee]=useState(0);const[createPc,setCreatePc]=useState(2);
+const[searching,setSearching]=useState(false);
 const[name,setName]=useState(()=>localStorage.getItem('gr_name')||'');
 const[soundOn,setSoundOn]=useState(()=>localStorage.getItem('gr_sound')!=='off');
 const[onlineCount,setOnlineCount]=useState(0);
@@ -117,8 +116,6 @@ const socketRef=useRef(null);const myPI=useRef(0);
 const nameRef=useRef(name);nameRef.current=name;
 const saveName=n=>{setName(n);nameRef.current=n;localStorage.setItem('gr_name',n)};
 const toggleSound=()=>{const nv=!soundOn;setSoundOn(nv);mutedRef.current=!nv;localStorage.setItem('gr_sound',nv?'on':'off');if(!nv)stopMusic()};
-const shareUrl=waitInfo?`${window.location.origin}?join=${waitInfo.gameId}`:'';
-const copyInvite=()=>{if(!shareUrl)return;navigator.clipboard?.writeText(shareUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000)}).catch(()=>{})};
 const shareResult=()=>{const txt=`🏆 Набрал ${scores[0]} очков в Gem Rush! Сможешь больше?\n${window.location.origin}`;if(navigator.share)navigator.share({title:'Gem Rush',text:txt}).catch(()=>{});else navigator.clipboard?.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000)}).catch(()=>{})};
 
 const myPlayer=useMemo(()=>({...ME,n:name||'Ты'}),[name]);
@@ -140,17 +137,8 @@ useEffect(()=>{
   const socket=io(window.location.origin,{transports:["websocket","polling"]});
   socketRef.current=socket;
   socket.on('online_count',c=>setOnlineCount(c));
-  socket.on('games_list',list=>setGamesList(list));
-  socket.on('game_created',({gameId})=>setWaitInfo({gameId,current:1,max:createPc}));
-  socket.on('player_joined',({currentPlayers,maxPlayers})=>setWaitInfo(w=>w?{...w,current:currentPlayers,max:maxPlayers}:w));
-  socket.on('player_left',({currentPlayers,maxPlayers})=>setWaitInfo(w=>w?{...w,current:currentPlayers,max:maxPlayers}:w));
-  socket.on('game_expired',()=>{setScr('onlineLobby');setWaitInfo(null)});
-  socket.on('join_error',({message})=>alert(message));
+  socket.on('searching',()=>setSearching(true));
   socket.on('emote',({playerIndex,emoji})=>{setEmoteShow({pi:playerIndex,emoji,t:Date.now()});setTimeout(()=>setEmoteShow(null),1800)});
-  // Auto-join from URL
-  const params=new URLSearchParams(window.location.search);
-  const joinId=params.get('join');
-  if(joinId){window.history.replaceState({},'',window.location.pathname);socket.on('connect',()=>{setTimeout(()=>{socket.emit('join_game',{gameId:joinId,name:nameRef.current||'Гость'});setScr('onlineWait');setWaitInfo({gameId:joinId,current:0,max:0})},300)})}
   socket.on('game_start',({seed,playerIndex,playerCount})=>{
     myPI.current=playerIndex;
     const npc=playerCount;setPc(npc);pcR.current=npc;
@@ -163,7 +151,7 @@ useEffect(()=>{
     setScorePop(null);setSwapAnim(null);setFallAnims(null);
     setSpTip(null);setMileHit(null);setMilesR([]);
     seenSp.current.clear();parts.length=0;lm.current=Date.now();
-    setWaitInfo(null);setMode('online');modeR.current='online';
+    setSearching(false);setMode('online');modeR.current='online';
     setScr("game");startMusic();
   });
   socket.on('scores_update',({scores:ss})=>{
@@ -183,7 +171,7 @@ useEffect(()=>{
     if(!wR.current&&modeR.current==='online'){setWin("you");wR.current="you";sfx("win");setStreak(sk=>sk+1);stopMusic()}
   });
   return()=>socket.disconnect();
-},[startMusic,stopMusic,sfx,createPc]);
+},[startMusic,stopMusic,sfx]);
 
 const reportScore=useCallback(sc=>{if(modeR.current==='online')socketRef.current?.emit('score_update',{score:sc})},[]);
 
@@ -278,7 +266,7 @@ const startLocal=(m,npc,f)=>{
   setScr("game");startMusic();
 };
 
-const goMenu=()=>{setScr("menu");setWin(null);wR.current=null;stopMusic();socketRef.current?.emit('leave_game')};
+const goMenu=()=>{setScr("menu");setWin(null);wR.current=null;setSearching(false);stopMusic();socketRef.current?.emit('leave_game');socketRef.current?.emit('cancel_match')};
 const fmt=s=>`${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 
 // ===== SCREENS =====
@@ -296,7 +284,7 @@ if(scr==="menu")return(<div style={WRAP}>
 <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
 <button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,width:"100%",fontSize:18}}>🧘 Соло — тренировка</button>
 <button onClick={()=>setScr('botSetup')} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #7C83FF50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#7C83FF,#5C6BC0)",color:"#fff",boxShadow:"0 5px 0 #3949AB,0 0 30px rgba(124,131,255,0.3)"}}>🤖 Против ботов</button>
-<button onClick={()=>{setScr('onlineLobby');socketRef.current?.emit('list_games')}} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #FF6B6B50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#FF6B6B,#E53935)",color:"#fff",boxShadow:"0 5px 0 #C62828,0 0 30px rgba(255,107,107,0.3)"}}>🌐 Онлайн мультиплеер</button>
+<button onClick={()=>{socketRef.current?.emit('find_match',{name:name||'Гость'});setScr('searching')}} style={{width:"100%",padding:"14px 0",borderRadius:18,border:"2px solid #FF6B6B50",cursor:"pointer",fontWeight:900,fontSize:18,background:"linear-gradient(180deg,#FF6B6B,#E53935)",color:"#fff",boxShadow:"0 5px 0 #C62828,0 0 30px rgba(255,107,107,0.3)"}}>🌐 Онлайн — найти соперника</button>
 </div>
 <div style={{marginTop:16,display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%"}}>
 <div style={{fontSize:11,color:"#475569",fontWeight:600}}>Match-3 гонка — первый до 1000!</div>
@@ -318,50 +306,15 @@ return(<div style={WRAP}>
 <button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:6}}>← Назад</button>
 </div></div>)}
 
-// Online lobby
-if(scr==="onlineLobby")return(<div style={WRAP}>
-<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:40}}>🌐</div><h2 style={{fontSize:24,fontWeight:900,color:"#fff",margin:"4px 0"}}>Онлайн</h2></div>
-<button onClick={()=>setScr('createGame')} style={{...BTN_GOLD,width:"100%",marginBottom:12}}>➕ Создать игру</button>
-<div style={{width:"100%",flex:1}}>
-<div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Доступные игры ({gamesList.length})</div>
-{gamesList.length===0?<div style={{background:CARD,borderRadius:16,padding:"24px 16px",textAlign:"center",border:"1px solid #334155"}}><div style={{fontSize:36,marginBottom:8}}>🏜️</div><div style={{fontSize:14,color:"#64748b",fontWeight:700}}>Пока нет игр</div><div style={{fontSize:12,color:"#475569",marginTop:4}}>Создай первую!</div></div>
-:gamesList.map(g=><div key={g.id} onClick={()=>socketRef.current?.emit('join_game',{gameId:g.id,name:name||'Гость'})} style={{background:CARD,borderRadius:16,padding:"12px 16px",marginBottom:8,border:"1px solid #334155",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-<div><div style={{fontSize:14,fontWeight:800,color:"#fff"}}>⚔️ {g.maxPlayers===2?"1v1":g.maxPlayers===3?"1v2":"1v3"}</div>
-<div style={{fontSize:11,color:"#64748b",fontWeight:600}}>{g.fee>0?`💰 $${g.fee}`:"🆓 Бесплатно"}</div></div>
-<div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:900,color:g.currentPlayers<g.maxPlayers?"#66BB6A":"#FF5252"}}>{g.currentPlayers}/{g.maxPlayers}</div>
-<div style={{fontSize:10,color:"#64748b"}}>{g.maxPlayers-g.currentPlayers} мест</div></div>
-</div>)}
-</div>
-<button onClick={()=>{socketRef.current?.emit('list_games')}} style={{...BTN_SEC,width:"100%",marginTop:8}}>🔄 Обновить</button>
-<button onClick={goMenu} style={{...BTN_SEC,width:"100%",marginTop:6}}>← Назад</button>
-</div>);
-
-// Create game
-if(scr==="createGame")return(<div style={WRAP}>
-<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:40}}>➕</div><h2 style={{fontSize:24,fontWeight:900,color:"#fff",margin:"4px 0"}}>Создать игру</h2></div>
-<div style={{background:CARD,borderRadius:28,padding:"20px 16px",width:"100%",border:"2px solid #FF6B6B30"}}>
-<div style={{marginBottom:14}}><div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>⚔️ Формат</div><div style={{display:"flex",gap:6}}>{[2,3,4].map(n=><button key={n} onClick={()=>setCreatePc(n)} style={{flex:1,padding:"9px 0",borderRadius:12,cursor:"pointer",fontWeight:800,fontSize:14,background:createPc===n?"linear-gradient(180deg,#FF6B6B,#E53935)":"rgba(255,255,255,0.05)",border:createPc===n?"2px solid #FF6B6B":"2px solid #334155",color:createPc===n?"#fff":"#64748b"}}>{n===2?"1v1":n===3?"1v2":"1v3"}</button>)}</div></div>
-<div style={{marginBottom:14}}><div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>💰 Ставка</div><div style={{display:"flex",gap:5}}>{[0,.5,1,2,5].map(f=><button key={f} onClick={()=>setCreateFee(f)} style={{flex:1,padding:"9px 0",borderRadius:12,cursor:"pointer",fontWeight:800,fontSize:13,background:createFee===f?"linear-gradient(180deg,#FFD54F,#FF8F00)":"rgba(255,255,255,0.05)",border:createFee===f?"2px solid #FFB300":"2px solid #334155",color:createFee===f?"#5D4037":"#64748b"}}>{f===0?"Free":`$${f}`}</button>)}</div></div>
-<button onClick={()=>{socketRef.current?.emit('create_game',{maxPlayers:createPc,fee:createFee,name:name||'Гость'});setScr('onlineWait')}} style={{...BTN_GOLD,width:"100%"}}>🚀 Создать</button>
-<button onClick={()=>setScr('onlineLobby')} style={{...BTN_SEC,width:"100%",marginTop:6}}>← Назад</button>
-</div></div>);
-
-// Waiting for players
-if(scr==="onlineWait")return(<div style={{...WRAP,justifyContent:"center"}}>
-<div style={{background:CARD,borderRadius:28,padding:"32px 24px",width:"100%",boxShadow:"0 0 40px rgba(255,107,107,0.15)",border:"2px solid #FF6B6B40",textAlign:"center"}}>
-<div style={{fontSize:64,animation:"bob 2s ease-in-out infinite"}}>⏳</div>
-<h2 style={{fontSize:22,fontWeight:900,color:"#fff",margin:"12px 0 8px"}}>Ждём игроков...</h2>
-{waitInfo&&<><div style={{fontSize:36,fontWeight:900,color:"#FF6B6B",margin:"8px 0"}}>{waitInfo.current} / {waitInfo.max}</div>
-<div style={{fontSize:13,color:"#94a3b8",fontWeight:600}}>{waitInfo.max-waitInfo.current} мест свободно</div></>}
-{shareUrl&&<div style={{margin:"12px 0"}}>
-<div style={{fontSize:11,color:"#64748b",fontWeight:800,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Пригласи друга</div>
-<div style={{background:"rgba(255,255,255,0.06)",borderRadius:12,padding:"8px 12px",border:"1px solid #334155",fontSize:12,color:"#94a3b8",wordBreak:"break-all",fontFamily:"monospace",marginBottom:8}}>{shareUrl}</div>
-<div style={{display:"flex",gap:6,justifyContent:"center"}}>
-<button onClick={copyInvite} style={{...BTN_SEC,padding:"8px 20px",fontSize:13,fontWeight:800,background:copied?"rgba(102,187,106,0.15)":"rgba(255,255,255,0.05)",color:copied?"#66BB6A":"#94a3b8",border:copied?"1px solid #66BB6A":"1px solid #334155"}}>{copied?'Скопировано!':'📋 Копировать'}</button>
-{navigator.share&&<button onClick={()=>navigator.share({title:'Gem Rush',text:'Давай играть в Gem Rush!',url:shareUrl}).catch(()=>{})} style={{...BTN_SEC,padding:"8px 20px",fontSize:13,fontWeight:800}}>📤 Поделиться</button>}
-</div></div>}
-<div style={{display:"flex",justifyContent:"center",gap:8,margin:"12px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:12,height:12,borderRadius:6,background:"#FF6B6B",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
-<button onClick={()=>{socketRef.current?.emit('leave_game');setScr('onlineLobby')}} style={{...BTN_SEC,padding:"10px 28px"}}>Отмена</button>
+// Searching for opponent
+if(scr==="searching")return(<div style={{...WRAP,justifyContent:"center"}}>
+<div style={{background:CARD,borderRadius:28,padding:"40px 24px",width:"100%",boxShadow:"0 0 40px rgba(255,107,107,0.15)",border:"2px solid #FF6B6B40",textAlign:"center"}}>
+<div style={{fontSize:64,animation:"bob 2s ease-in-out infinite"}}>🔍</div>
+<h2 style={{fontSize:24,fontWeight:900,color:"#fff",margin:"16px 0 8px"}}>Ищем соперника...</h2>
+<div style={{fontSize:14,color:"#94a3b8",fontWeight:600}}>Как только кто-то зайдёт — игра начнётся</div>
+{onlineCount>1&&<div style={{marginTop:8,fontSize:13,color:"#66BB6A",fontWeight:700}}><span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:"#66BB6A",marginRight:4,animation:"pulse 2s infinite"}}></span>{onlineCount} онлайн</div>}
+<div style={{display:"flex",justifyContent:"center",gap:8,margin:"20px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:12,height:12,borderRadius:6,background:"#FF6B6B",animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}/>)}</div>
+<button onClick={goMenu} style={{...BTN_SEC,padding:"10px 28px"}}>Отмена</button>
 </div></div>);
 
 // ===== GAME SCREEN =====
@@ -416,7 +369,7 @@ return(<div style={{minHeight:"100vh",background:BG,display:"flex",flexDirection
 <button onClick={goMenu} style={{...BTN_SEC,flex:1}}>Меню</button>
 {mode==='solo'&&<button onClick={()=>startLocal('solo',1,0)} style={{...BTN_GOLD,flex:2,fontSize:16}}>🔄 Ещё раз</button>}
 {mode==='bot'&&<button onClick={()=>startLocal('bot',pc,fee)} style={{...BTN_GOLD,flex:2,fontSize:16}}>⚡ Реванш</button>}
-{mode==='online'&&<button onClick={()=>{setWin(null);wR.current=null;setScr('onlineLobby');socketRef.current?.emit('list_games')}} style={{...BTN_GOLD,flex:2,fontSize:16}}>🌐 Лобби</button>}
+{mode==='online'&&<button onClick={()=>{setWin(null);wR.current=null;socketRef.current?.emit('find_match',{name:name||'Гость'});setScr('searching')}} style={{...BTN_GOLD,flex:2,fontSize:16}}>🔄 Ещё раз</button>}
 </div></div></div>)}
 <style>{`@keyframes bIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}@keyframes fIn{from{opacity:0}to{opacity:1}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-70px) scale(1.3)}}@keyframes cF{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}@keyframes cmIn{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.2) rotate(3deg)}100%{transform:scale(1) rotate(0);opacity:1}}@keyframes vP{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@keyframes pI{0%{transform:scale(0) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}@keyframes sS{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes pulseBtn{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}button:active{filter:brightness(.9)!important}`}</style>
 </div>)}
